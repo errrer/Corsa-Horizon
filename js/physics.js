@@ -274,7 +274,7 @@ export class CarPhysics {
       const lL = heightAt(this.x + cy * hw, this.z - sy * hw), lR = heightAt(this.x - cy * hw, this.z + sy * hw);
       pT = Math.atan2(fF - fR, this.L); // nose up positive
       rT = Math.atan2(lL - lR, hw * 2); // left side up positive
-      pT -= this.ax * 0.012; // squat / dive
+      // no squat / dive: body stays level under braking and acceleration
       rT += (this.u * this.r) * 0.0035 * (s.roll || 1); // body roll (leans outward)
     } else {
       const hv = Math.max(Math.hypot(this.vx, this.vz), 1);
