@@ -67,6 +67,34 @@ class Particles {
   }
 }
 
+// tyre marks: a ring buffer of dark quads laid behind slipping wheels
+class Skids {
+  constructor(scene, n = 700) {
+    this.n = n; this.i = 0; this.last = [null, null];
+    this.pos = new Float32Array(n * 12); const idx = new Uint32Array(n * 6);
+    for (let q = 0; q < n; q++) idx.set([q * 4, q * 4 + 1, q * 4 + 2, q * 4 + 1, q * 4 + 3, q * 4 + 2], q * 6);
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3)); g.setIndex(new THREE.BufferAttribute(idx, 1));
+    this.attr = g.attributes.position;
+    this.mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0x050505, transparent: true, opacity: 0.5, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
+    this.mesh.frustumCulled = false; this.mesh.renderOrder = 2; scene.add(this.mesh);
+  }
+  clear() { this.last = [null, null]; }
+  update(c) {
+    const on = c.grounded && c.wheelSlip > 0.45 && c.speed > 5 && !c.inWater && c.surf !== 5;
+    if (!on) { this.last = [null, null]; return; }
+    const s = Math.sin(c.yaw), co = Math.cos(c.yaw), back = c.spec.wb * 0.5, half = c.spec.track * 0.5;
+    for (let k = 0; k < 2; k++) {
+      const side = k ? 1 : -1, x = c.x - s * back + co * side * half, z = c.z - co * back - s * side * half, p = this.last[k];
+      this.last[k] = { x, z };
+      if (!p) continue;
+      const dx = x - p.x, dz = z - p.z, d = Math.hypot(dx, dz); if (d < 0.25 || d > 4) { if (d > 4) this.last[k] = null; continue; }
+      const nx = (-dz / d) * 0.15, nz = (dx / d) * 0.15, o = this.i * 12, y0 = heightAt(p.x, p.z) + 0.05, y1 = heightAt(x, z) + 0.05;
+      this.pos.set([p.x - nx, y0, p.z - nz, p.x + nx, y0, p.z + nz, x - nx, y1, z - nz, x + nx, y1, z + nz], o);
+      this.i = (this.i + 1) % this.n; this.attr.needsUpdate = true;
+    }
+  }
+}
+
 class Game {
   constructor() {
     this.state = Save.load();
@@ -100,7 +128,7 @@ class Game {
     this.chunks = new ChunkManager(this.scene, this.mats);
     this.sky = new SkySystem(this.scene, this.renderer, this.camera);
     this.weather = new Weather(); this.weather.thunder = (d) => this.audio.thunder(d);
-    this.particles = new Particles(this.scene);
+    this.particles = new Particles(this.scene); this.skids = new Skids(this.scene);
     this.traffic = new Traffic(this.scene);
     this.events = new EventManager(this);
     this.festival = new Festival(this.scene, this.chunks);
@@ -136,7 +164,8 @@ class Game {
         import('three/addons/environments/RoomEnvironment.js')]);
       const pm = new THREE.PMREMGenerator(this.renderer);
       this.envTex = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose();
-      const comp = new EffectComposer(this.renderer);
+      const q = this.state.settings.quality, rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: q === 'ultra' || q === 'high' ? 4 : 2 });
+      const comp = new EffectComposer(this.renderer, rt);
       comp.addPass(new RenderPass(this.scene, this.camera));
       this.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.3, 0.6, 0.95);
       comp.addPass(this.bloom); comp.addPass(new OutputPass());
@@ -215,7 +244,7 @@ class Game {
   giveCar(id) { const s = carById(id); if (!this.state.cars[id]) this.state.cars[id] = { color: s.color, up: {} }; this.save(); }
   placeCar(x, z, yaw, speed = 0) {
     this.car.reset(x, z, yaw, speed); this.car.y = heightAt(x, z);
-    this.rewindBuf.length = 0; this.cam.yaw = yaw; this.camSnap = true; this.softHit.clear();
+    this.rewindBuf.length = 0; this.cam.yaw = yaw; this.camSnap = true; this.softHit.clear(); if (this.skids) this.skids.clear();
     this.skillReset();
   }
   placeOnRoad(x = this.car.x, z = this.car.z, start = false) {
@@ -399,6 +428,7 @@ class Game {
     this.updateCamera(dt);
     this.sky.update(dt, this.hour, this.weather, { x: c.x, y: c.y, z: c.z });
     this.chunks.setNight(this.sky.night);
+    { const wet = this.weather.cur.rain; this.mats.road.roughness = 0.88 - 0.62 * wet; this.mats.road.color.setScalar(1 - 0.28 * wet); this.mats.terrain.color.setScalar(1 - 0.16 * wet); if (this.envTex) { this.mats.road.envMap = this.envTex; this.mats.road.envMapIntensity = wet * 0.7; } }
     if (run) this.chunks.update(c.x, c.z);
     this.festival.update(dt, this.time, this.sky.night);
     this.repoTown.update(dt, this.time, c);
@@ -459,7 +489,7 @@ class Game {
     if (!c.grounded) s.airTime += dt;
     if ((this.achT += dt) > 2) { this.achT = 0; this.checkAch(); }
     if ((this.saveT += dt) > 20) { this.saveT = 0; this.save(); }
-    this.emitParticles(dt);
+    this.emitParticles(dt); this.skids.update(c);
     // camera shake from impacts
     this.cam.shake = Math.max(0, this.cam.shake - dt * 3);
   }
