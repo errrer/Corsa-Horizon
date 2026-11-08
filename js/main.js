@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { initWorld, setSeason, world, heightAt, nearRoad, nearestRoadIndex, roadFrame, FAM } from './terrain.js';
 import { CarPhysics, deriveSpec, computePI, classOf, snapshot, restore } from './physics.js';
 import { CARS, carById } from './cars.js';
-import { makeCarModel, loadHuracan } from './models.js';
+import { makeCarModel, loadModel } from './models.js';
 import { makeMaterials, ChunkManager } from './chunks.js';
 import { SkySystem, Weather } from './sky.js';
 import { AudioSys, STATIONS } from './audio.js';
@@ -109,8 +109,8 @@ class Game {
     this.applyQuality();
     this.applyCar(true);
     await this.setupPost();
-    this.setLoad(0.06, 'Loading the Huracán...');
-    try { await loadHuracan(); } catch (e) { console.warn('Huracan model unavailable', e); }
+    this.setLoad(0.06, 'Loading car models...');
+    for (const k of ['huracan', 'gt3']) { try { this.setLoad(0.07, 'Loading car models...'); await loadModel(k); } catch (e) { console.warn(k + ' model unavailable', e); } }
     this.applyCar(true);
     this.setLoad(0.08, 'Raising the festival...');
     await frame();

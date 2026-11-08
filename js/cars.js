@@ -16,6 +16,7 @@ const STYLES = {
   hyper:   { L: 4.70, W: 2.06, H: 1.10, clear: 0.10, belt: 0.70, cab: [0.0, -0.12, -0.22, -0.32], hood: 0.22, tail: 0.14, wr: 0.35, wing: 1 },
 };
 
+STYLES.gt3 = { ...STYLES.super, L: 4.57, W: 1.85, H: 1.28, wr: 0.35 };
 STYLES.huracan = { ...STYLES.super, L: 4.52, W: 1.93, H: 1.17, wr: 0.35 };
 const B = (o) => ({ cgH: 0.5, brake: 1.15, stiff: 9.5, offroad: 0.1, steer: 0.55, roll: 1, cyl: 4, nitroBase: 1, ...o });
 const RAW = [
@@ -28,7 +29,8 @@ const RAW = [
   B({ id: 'rebase', name: 'Rebase Roadster', style: 'roadster', price: 70000, mass: 1100, kw: 270, top: 260, drive: 'RWD', mu: 1.25, wf: 0.5, steer: 0.6, color: 0xd29922, cyl: 4, desc: 'Light, open-top and rewrites history.' }),
   B({ id: 'buggy', name: 'Pull Request Buggy', style: 'buggy', price: 30000, mass: 850, kw: 160, top: 170, drive: 'AWD', mu: 1.2, wf: 0.45, offroad: 1, steer: 0.65, color: 0xe3b341, cyl: 4, desc: 'Approved by everyone. Jumps over anything.' }),
   B({ id: 'release', name: 'Release Candidate', style: 'super', price: 210000, mass: 1450, kw: 520, top: 330, drive: 'AWD', mu: 1.35, wf: 0.45, downforce: 1.0, color: 0xf85149, cyl: 10, desc: 'Almost production-ready. Mostly just fast.' }),
-  B({ id: 'huracan', name: 'Lamborghini Huracán', style: 'huracan', glb: true, price: 185000, mass: 1422, kw: 449, top: 325, drive: 'AWD', mu: 1.42, wf: 0.43, downforce: 0.9, steer: 0.52, color: 0xf0883e, cyl: 10, desc: 'Italian V10 supercar. Model by RBLXSupercars (CC BY 4.0).' }),
+  B({ id: 'huracan', name: 'Lamborghini Huracán', style: 'huracan', glb: 'huracan', price: 185000, mass: 1422, kw: 449, top: 325, drive: 'AWD', mu: 1.42, wf: 0.43, downforce: 0.9, steer: 0.52, color: 0xf0883e, cyl: 10, desc: 'Italian V10 supercar. Model by RBLXSupercars (CC BY 4.0).' }),
+  B({ id: 'gt3', name: 'Porsche 911 GT3', style: 'gt3', glb: 'gt3', price: 165000, mass: 1435, kw: 375, top: 318, drive: 'RWD', mu: 1.4, wf: 0.39, downforce: 1.1, steer: 0.5, color: 0xe6edf3, cyl: 6, desc: 'Track-bred flat-six. Model by Ddiaz Design (CC BY 4.0).' }),
   B({ id: 'deploy', name: 'Deploy Hypercar', style: 'hyper', price: 650000, mass: 1350, kw: 900, top: 400, drive: 'AWD', mu: 1.5, wf: 0.44, downforce: 1.6, steer: 0.5, color: 0xe6edf3, cyl: 12, desc: 'Straight to production. No rollback.' }),
 ];
 export const CARS = RAW.map((c) => {
