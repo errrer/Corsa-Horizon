@@ -84,7 +84,7 @@ class Game {
     const canvas = $('c');
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: (PRESETS[set.quality] || PRESETS.medium).aa, powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.08;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.3;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(set.fov, innerWidth / innerHeight, 0.4, 4200);
@@ -138,7 +138,7 @@ class Game {
       this.envTex = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose();
       const comp = new EffectComposer(this.renderer);
       comp.addPass(new RenderPass(this.scene, this.camera));
-      this.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.38, 0.65, 0.92);
+      this.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.3, 0.6, 0.95);
       comp.addPass(this.bloom); comp.addPass(new OutputPass());
       this.composer = comp; this.resize();
     } catch (e) { console.warn('Post-processing unavailable', e); this.composer = null; }

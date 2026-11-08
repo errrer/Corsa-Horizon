@@ -9,6 +9,7 @@ import { clamp, lerp, smoothstep, hash2, mulberry32 } from './util.js';
 
 // ---------- colour helpers (palettes are authored in sRGB, vertex colours are linear) ----------
 const toLin = (c) => Math.pow(clamp(c, 0, 1), 2.2);
+const punch = (c, s = 1.3, b = 1.1) => { const a = (c[0] + c[1] + c[2]) / 3; return [(a + (c[0] - a) * s) * b, (a + (c[1] - a) * s) * b, (a + (c[2] - a) * s) * b]; };
 const hex = (h) => [((h >> 16) & 255) / 255, ((h >> 8) & 255) / 255, (h & 255) / 255];
 const mix3 = (a, b, t, o) => { o[0] = a[0] + (b[0] - a[0]) * t; o[1] = a[1] + (b[1] - a[1]) * t; o[2] = a[2] + (b[2] - a[2]) * t; return o; };
 const GRASS = { summer: hex(0x4b8a32), spring: hex(0x62a640), autumn: hex(0x9a7a2c), winter: hex(0xe2e6ee) };
@@ -165,10 +166,10 @@ export function makeMaterials() {
     road: new THREE.MeshStandardMaterial({ map: road, roughness: 0.88, metalness: 0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
     plain: new THREE.MeshStandardMaterial({ map: plain, roughness: 0.88, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }),
     dirt: new THREE.MeshStandardMaterial({ map: dirt, roughness: 1, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
-    scenery: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 }),
-    lampPole: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.3 }),
+    scenery: new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, vertexColors: true, roughness: 0.9, metalness: 0 }),
+    lampPole: new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, vertexColors: true, roughness: 0.6, metalness: 0.3 }),
     lampHead: new THREE.MeshStandardMaterial({ color: 0xfff1c9, emissive: 0xffd88a, emissiveIntensity: 0, roughness: 0.4 }),
-    bldg: new THREE.MeshStandardMaterial({ vertexColors: true, map: wall, emissiveMap: lit, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.75, metalness: 0.1 }),
+    bldg: new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, vertexColors: true, map: wall, emissiveMap: lit, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.75, metalness: 0.1 }),
     board: [], grain,
   };
   mats.roadBase = [mats.road, mats.plain, mats.dirt];
@@ -296,7 +297,7 @@ export class ChunkManager {
         c = mix3(c, C.snow, smoothstep(98, 122, hh) * (il > 0.7 ? 1 : 0.4), tmp3);
       }
       const br = 0.94 + dn * 0.06;
-      col[k * 3] = toLin(c[0] * br); col[k * 3 + 1] = toLin(c[1] * br); col[k * 3 + 2] = toLin(c[2] * br);
+      const pc = punch(c); col[k * 3] = toLin(pc[0] * br); col[k * 3 + 1] = toLin(pc[1] * br); col[k * 3 + 2] = toLin(pc[2] * br);
     }
     // skirts hide cracks between LODs
     let s = n * n;
@@ -474,7 +475,7 @@ export class ChunkManager {
       }
       if (++count > 90) continue;
       const sc = 0.8 + r4 * 0.9;
-      const lin = (c, k = 1) => [toLin(c[0] * k), toLin(c[1] * k), toLin(c[2] * k)];
+      const lin = (c, k = 1) => { const p = punch(c, 1.25, 1.08); return [toLin(p[0] * k), toLin(p[1] * k), toLin(p[2] * k)]; };
       if (isDesert) {
         const cc = lin(hex(0x4f8a4a), 0.9 + r4 * 0.2);
         trees.cyl(lx, h, lz, 0.32 * sc, 0.28 * sc, 2.8 * sc, 6, cc);

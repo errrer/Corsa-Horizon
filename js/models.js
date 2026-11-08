@@ -48,6 +48,11 @@ async function fetchBuffer(cfg) {
 }
 const clean = (g) => { for (const n of Object.keys(g.attributes)) if (n !== 'position' && n !== 'normal' && n !== 'uv') g.deleteAttribute(n); if (!g.attributes.normal) g.computeVertexNormals(); if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2)); if (!g.index) { const n = g.attributes.position.count, a = new Uint32Array(n); for (let i = 0; i < n; i++) a[i] = i; g.setIndex(new THREE.BufferAttribute(a, 1)); } return g; };
 
+function flipWinding(g) {
+  if (g.index) { const a = g.index.array; for (let i = 0; i < a.length; i += 3) { const t = a[i]; a[i] = a[i + 2]; a[i + 2] = t; } g.index.needsUpdate = true; }
+  else { const p = g.attributes; for (let i = 0; i + 2 < p.position.count; i += 3) for (const n in p) { const at = p[n], s = at.itemSize; for (let k = 0; k < s; k++) { const x = at.array[i * s + k]; at.array[i * s + k] = at.array[(i + 2) * s + k]; at.array[(i + 2) * s + k] = x; } } }
+}
+
 export async function loadModel(key) {
   const cfg = MODELS[key], buf = await fetchBuffer(cfg);
   const gltf = await new Promise((res, rej) => new GLTFLoader().parse(buf, '', res, rej));
@@ -58,6 +63,7 @@ export async function loadModel(key) {
     const mat = o.material; mats[mat.name] = mat;
     if (mat.transmission > 0) { mat.transmission = 0; mat.transparent = true; mat.depthWrite = false; } // cheap glass
     const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld);
+    if (o.matrixWorld.determinant() < 0) flipWinding(g); // mirrored instances come out inside-out otherwise
     if (cfg.mode === 'node') {
       let kind = 'body'; for (let p = o; p; p = p.parent) { if (p.name === cfg.wheelRoot) { kind = 'wheel'; break; } if (p.name && p.name.startsWith(cfg.calliperRoot)) { kind = 'cal'; break; } }
       if (kind === 'body') { parts.push({ geom: g, mat, name: mat.name, wheel: -1 }); return; }

@@ -3,7 +3,7 @@ const KEY = 'horizonPages.save.v1';
 
 export const SETTINGS_DEFAULT = {
   quality: 'medium', units: 'kmh', traffic: 2, master: 0.7, music: 0.5, sfx: 0.8, fov: 68, cam: 0,
-  tod: 'real', todSpeed: 1, weather: 'auto', season: 'auto', difficulty: 1, drive: 'left', seed: 1337,
+  tod: '11', todSpeed: 1, weather: 'auto', season: 'auto', difficulty: 1, drive: 'left', seed: 1337,
   github: '', name: 'Racer', radio: 0, abs: true, tcs: true, stm: true, line: true, auto: true, shake: true, hints: true,
 };
 export function defaults() {
@@ -22,6 +22,7 @@ export function load() {
     if (!raw) return d;
     const s = JSON.parse(raw);
     const out = { ...d, ...s, stats: { ...d.stats, ...(s.stats || {}) }, settings: { ...d.settings, ...(s.settings || {}) } };
+    if (!out.settings.bright2) { out.settings.bright2 = true; out.settings.tod = '11'; out.settings.weather = 'auto'; } // one-time: start in daylight
     if (!out.cars || !Object.keys(out.cars).length) out.cars = d.cars;
     if (!out.cars[out.current]) out.current = Object.keys(out.cars)[0];
     return out;
@@ -33,7 +34,9 @@ export const exportSave = (state) => JSON.stringify(state);
 export function importSave(text) {
   const s = JSON.parse(text);
   if (!s || typeof s !== 'object' || !s.cars) throw new Error('Not a Horizon Pages save');
-  return { ...defaults(), ...s, settings: { ...SETTINGS_DEFAULT, ...(s.settings || {}) }, stats: { ...defaults().stats, ...(s.stats || {}) } };
+  const set = { ...SETTINGS_DEFAULT, ...(s.settings || {}) };
+  if (!set.bright2) { set.bright2 = true; set.tod = '11'; set.weather = 'auto'; } // one-time: start in daylight
+  return { ...defaults(), ...s, settings: set, stats: { ...defaults().stats, ...(s.stats || {}) } };
 }
 
 export const xpForNext = (level) => 500 + level * 260;

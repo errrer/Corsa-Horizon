@@ -26,7 +26,7 @@ export class Weather {
     if (this.auto) {
       this.timer -= dt;
       if (this.timer <= 0) {
-        const w = { clear: 0.36, cloudy: 0.24, rain: 0.16, fog: 0.08, storm: 0.06, snow: season === 'winter' ? 0.3 : 0.02 };
+        const w = { clear: 0.62, cloudy: 0.2, rain: 0.09, fog: 0.04, storm: 0.03, snow: season === 'winter' ? 0.3 : 0.02 };
         if (season === 'winter') { w.rain = 0.02; w.storm = 0.02; }
         let r = Math.random() * Object.values(w).reduce((a, b) => a + b, 0), pick = 'clear';
         for (const [n, v] of Object.entries(w)) { if ((r -= v) <= 0) { pick = n; break; } }
@@ -159,11 +159,11 @@ export class SkySystem {
     const sunset = Math.exp(-Math.pow(sy2 / 0.2, 2)) * (sy2 > -0.2 ? 1 : 0);
     const cloud = wx.cur.cloud, fogW = wx.cur.fog, flash = wx.flash;
 
-    let top = mixc([0.01, 0.015, 0.05], [0.22, 0.48, 0.92], dayF);
-    let hor = mixc([0.05, 0.07, 0.13], [0.70, 0.82, 0.95], dayF);
+    let top = mixc([0.03, 0.05, 0.15], [0.14, 0.5, 1.0], dayF);
+    let hor = mixc([0.09, 0.12, 0.25], [0.66, 0.85, 1.0], dayF);
     hor = mixc(hor, [1.0, 0.52, 0.28], sunset * 0.75);
     top = mixc(top, [1.0, 0.6, 0.45].map((v, i) => v * 0.6 + top[i] * 0.4), sunset * 0.25);
-    const gray = dayF * 0.62 + (1 - dayF) * 0.05;
+    const gray = dayF * 0.8 + (1 - dayF) * 0.08;
     top = mixc(top, [gray * 0.8, gray * 0.85, gray * 0.95], cloud * 0.75);
     hor = mixc(hor, [gray, gray * 1.02, gray * 1.06], cloud * 0.6 + fogW * 0.3);
     if (flash > 0) { top = mixc(top, [0.8, 0.85, 1], flash * 0.6); hor = mixc(hor, [0.85, 0.9, 1], flash * 0.6); }
@@ -177,23 +177,23 @@ export class SkySystem {
     // fog follows the horizon colour; density from view distance and weather
     const fog = this.scene.fog;
     fog.color.copy(this.uniforms.uHor.value);
-    fog.density = (2.1 / this.viewDist) * (1 + fogW * 5.5) * (night > 0.5 ? 0.9 : 1);
+    fog.density = (1.5 / this.viewDist) * (1 + fogW * 5.5) * (night > 0.5 ? 0.9 : 1);
     this.renderer.setClearColor(fog.color);
 
     // lights
     const moon = sy2 < -0.08;
     const dirv = moon ? this.sunDir.clone().multiplyScalar(-1) : this.sunDir;
-    const sunI = 3.0 * dayF * (1 - 0.7 * cloud) * (1 - fogW * 0.4);
-    const moonI = 0.4 * smoothstep(-0.08, -0.3, sy2) * (1 - cloud * 0.6);
+    const sunI = 3.8 * dayF * (1 - 0.5 * cloud) * (1 - fogW * 0.3);
+    const moonI = 1.2 * smoothstep(-0.08, -0.3, sy2) * (1 - cloud * 0.6);
     this.sun.intensity = moon ? moonI : sunI;
     const lc = moon ? [0.55, 0.65, 1] : mixc([1, 0.97, 0.9], [1, 0.6, 0.35], sunset);
     rgb(this.sun.color, lc[0], lc[1], lc[2]);
     this.sun.position.set(focus.x + dirv.x * 160, focus.y + dirv.y * 160 + 20, focus.z + dirv.z * 160);
     this.sun.target.position.set(focus.x, focus.y, focus.z);
-    this.hemi.intensity = 0.3 + 0.8 * dayF * (1 - cloud * 0.25) + flash * 2.5;
-    const hs = mixc([0.06, 0.09, 0.2], [0.78, 0.88, 1], dayF);
+    this.hemi.intensity = 0.6 + 1.1 * dayF * (1 - cloud * 0.15) + flash * 2.5;
+    const hs = mixc([0.16, 0.22, 0.42], [0.8, 0.9, 1], dayF);
     rgb(this.hemi.color, hs[0], hs[1], hs[2]);
-    rgb(this.hemi.groundColor, 0.28 * dayF + 0.05, 0.24 * dayF + 0.05, 0.2 * dayF + 0.06);
+    rgb(this.hemi.groundColor, 0.4 * dayF + 0.08, 0.34 * dayF + 0.08, 0.26 * dayF + 0.09);
 
     // dome & clouds follow the camera
     const cp = this.camera.position;
