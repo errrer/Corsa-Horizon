@@ -84,7 +84,7 @@ export class UI {
     // hints
     if (set.hints) {
       this.hintT += dt;
-      const hints = ['W/S throttle & brake · A/D steer · Space handbrake to drift · Shift nitro', 'Drive into the glowing beams to find races & challenges', 'Hold G to rewind time · C changes camera · M opens the map', 'Visit Repo Town beside the festival to see your GitHub projects'];
+      const hints = ['W/S throttle & brake · A/D steer · Space handbrake to drift · Shift nitro', 'Drive into the glowing beams to find races & challenges', 'Hold G to rewind time · C changes camera · M opens the map', 'Visit the plaza to find Iron Strike and NodeNGW'];
       if (this.hintT > 14) { this.hintT = 0; }
       $('hint').textContent = this.hintT < 9 && g.time < 300 ? hints[Math.floor(g.time / 14) % hints.length] : '';
     } else $('hint').textContent = '';
@@ -197,11 +197,11 @@ export class UI {
   }
   closeMenu() { this.menuOpen = false; $('menu').classList.add('hidden'); this.g.onMenu(false); this.g.save(); }
   renderMenu() {
-    const tabs = [['map', 'Map'], ['events', 'Festival'], ['garage', 'Garage'], ['shop', 'Autoshow'], ['spin', 'Wheelspin'], ['repos', 'Repo Town'], ['stats', 'Progress'], ['settings', 'Settings'], ['help', 'Controls']];
+    const tabs = [['map', 'Map'], ['events', 'Festival'], ['garage', 'Garage'], ['shop', 'Autoshow'], ['spin', 'Wheelspin'], ['repos', 'Games'], ['online', 'Online'], ['stats', 'Progress'], ['settings', 'Settings'], ['help', 'Controls']];
     $('tabs').innerHTML = tabs.map(([k, n]) => `<div class="tab ${k === this.tab ? 'on' : ''}" data-tab="${k}">${n}</div>`).join('') + '<div style="flex:1"></div><div class="tab" data-tab="__close" id="closeTab">✕ Resume</div>';
     $('closeTab').onclick = (e) => { e.stopPropagation(); this.closeMenu(); };
     const body = $('menuBody');
-    const fn = { map: this.tMap, events: this.tEvents, garage: this.tGarage, shop: this.tShop, spin: this.tSpin, repos: this.tRepos, stats: this.tStats, settings: this.tSettings, help: this.tHelp }[this.tab] || this.tMap;
+    const fn = { map: this.tMap, events: this.tEvents, garage: this.tGarage, shop: this.tShop, spin: this.tSpin, repos: this.tRepos, online: this.tOnline, stats: this.tStats, settings: this.tSettings, help: this.tHelp }[this.tab] || this.tMap;
     this.mapC = null;
     body.innerHTML = '';
     fn.call(this, body);
@@ -340,12 +340,23 @@ export class UI {
     <div class="ov" style="margin:0 auto;max-width:560px"><div class="big">${st.wheelspins}</div><div class="mut">wheelspins available</div><div style="margin-top:14px"><button class="btn big" data-act="spin" ${st.wheelspins ? '' : 'disabled'}>Spin!</button></div></div>`;
   }
   tRepos(body) {
-    const rt = this.g.repoTown, st = this.g.state, u = rt.user;
-    const status = { demo: 'Showing demo repositories. Enter your GitHub username below to load yours.', loading: 'Loading from GitHub...', ok: `Loaded ${rt.repos.length} repositories for <b>${esc(u)}</b>.`, error: `Could not load (${esc(rt.error || '')}). Showing demo repositories.`, idle: '' }[rt.status];
-    body.innerHTML = `<h3>Repo Town</h3><p class="mut">Your public GitHub repositories become buildings in a district circling the festival. Taller buildings = more stars and code. Drive to a door and press E.</p>
-    <div class="row"><input type="text" id="ghUser" placeholder="GitHub username" value="${esc(u || st.settings.github || '')}" style="width:220px"> <button class="btn primary" data-act="loadRepos">Load my repos</button> <button class="btn" data-act="travel" data-x="${world.festival.x + 130}" data-z="${world.festival.z}">Go to Repo Town</button></div>
-    <div class="mut" style="margin-bottom:10px">${status}</div>
-    <div class="grid">${rt.repos.slice(0, 60).map((r) => `<div class="card"><h4>${esc(r.name)}</h4><div class="sub">${esc(r.lang || 'n/a')} · ★ ${r.stars} · ⑂ ${r.forks}${st.repos[r.name] ? ' · visited' : ''}</div><div class="mut" style="font-size:12px;min-height:34px">${esc(r.desc)}</div><div class="row">${r.url ? `<a class="btn small" href="${esc(r.url)}" target="_blank" rel="noopener">Repo</a>` : ''}${rt.siteUrl(r) ? `<a class="btn small primary" href="${esc(rt.siteUrl(r))}" target="_blank" rel="noopener">Live site</a>` : ''}</div></div>`).join('')}</div>`;
+    const rt = this.g.repoTown;
+    body.innerHTML = `<h3>Games</h3><p class="mut">The two big buildings in the festival plaza are the real games. Drive up to a door and press E, or open them from here.</p>
+    <div class="grid">${rt.repos.map((r) => `<div class="card"><h4>${esc(r.name)}</h4><div class="sub">${esc(r.lang || '')}${this.g.state.repos[r.name] ? ' · visited' : ''}</div><div class="mut" style="font-size:13px;min-height:40px">${esc(r.desc)}</div><div class="row">${rt.siteUrl(r) ? `<a class="btn small primary" href="${esc(rt.siteUrl(r))}" target="_blank" rel="noopener">Play</a>` : ''}${r.url ? `<a class="btn small" href="${esc(r.url)}" target="_blank" rel="noopener">Repository</a>` : ''}</div></div>`).join('')}</div>
+    <div class="row" style="margin-top:12px"><button class="btn" data-act="travel" data-x="${world.festival.x + 130}" data-z="${world.festival.z}">Drive to the plaza</button></div>`;
+  }
+  tOnline(body) {
+    const n = this.g.net, set = this.g.state.settings;
+    body.innerHTML = `<h3>Online multiplayer</h3><p class="mut">Peer-to-peer: one player hosts a room, friends join with the 5-letter code. Everyone sees each other's cars with name tags. Players join the host's world.</p>
+    <label class="set">Your name <input type="text" data-set="name" maxlength="16" value="${esc(set.name || 'Racer')}" style="width:180px"></label>
+    <div class="row"><button class="btn primary" data-act="hostRoom">Host a room</button> <input type="text" id="roomIn" placeholder="ROOM CODE" maxlength="5" style="width:130px;text-transform:uppercase"> <button class="btn" data-act="joinRoom">Join</button> <button class="btn danger" data-act="leaveRoom">Leave</button></div>
+    <div id="netStatus" class="gold" style="margin:12px 0;font-weight:700"></div><div id="netList"></div>`;
+    this.refreshOnline();
+  }
+  refreshOnline() {
+    const s = $('netStatus'), l = $('netList'), n = this.g.net; if (!s || !n) return;
+    s.textContent = n.status;
+    l.innerHTML = n.online ? '<h4>Players</h4>' + n.list().map((p) => `<div class="card" style="padding:8px 14px;margin:4px 0">${esc(p.name)}</div>`).join('') : '';
   }
   tStats(body) {
     const st = this.g.state, s = st.stats, ach = ACHIEVEMENTS.map((a) => ({ a, ok: !!st.ach[a.id] }));
@@ -401,7 +412,9 @@ export class UI {
       case 'buy': { const s = carById(el.dataset.id); if (st.credits >= s.price && !st.cars[s.id]) { st.credits -= s.price; g.giveCar(s.id); st.current = s.id; g.applyCar(true); g.audio.blip('level'); g.save(); this.toast(`Purchased ${s.name}`, 'good'); this.renderMenu(); } break; }
       case 'sell': { const s = carById(el.dataset.id); if (confirm(`Sell ${s.name}?`)) { st.credits += Math.round(s.price * 0.45); delete st.cars[s.id]; st.current = Object.keys(st.cars)[0]; g.applyCar(true); g.save(); this.renderMenu(); } break; }
       case 'spin': this.closeMenu(); g.spinWheel(); break;
-      case 'loadRepos': { const u = $('ghUser').value.trim(); st.settings.github = u; g.repoTown.load(u, true).then(() => { if (this.menuOpen && this.tab === 'repos') this.renderMenu(); }); this.renderMenu(); break; }
+      case 'hostRoom': g.net.host(); break;
+      case 'joinRoom': g.net.join($('roomIn').value); break;
+      case 'leaveRoom': g.net.leave(); break;
       case 'applySeed': { const v = parseInt($('seedIn').value, 10) || 1; this.closeMenu(); g.newWorld(v); break; }
       case 'randSeed': { const v = Math.floor(Math.random() * 99999) + 1; this.closeMenu(); g.newWorld(v); break; }
       case 'exportSave': { const t = g.exportSave(); try { navigator.clipboard.writeText(t); this.toast('Save copied to clipboard', 'good'); } catch (err) { prompt('Copy your save:', t); } break; }

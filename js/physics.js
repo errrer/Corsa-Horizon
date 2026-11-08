@@ -239,7 +239,7 @@ export class CarPhysics {
     this.x += this.vx * dt; this.z += this.vz * dt;
 
     // vertical: gravity, ground contact, jumps
-    this.vy -= G * dt;
+    this.vy -= G * dt * (this.gravMul === undefined ? 1 : this.gravMul);
     this.y += this.vy * dt;
     const h = heightAt(this.x, this.z);
     const vyg = this._gx * this.vx + this._gz * this.vz;

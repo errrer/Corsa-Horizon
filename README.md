@@ -1,6 +1,6 @@
-# Horizon Pages
+# Corsa Horizons
 
-An endless open-world racing festival (Forza Horizon style) that runs entirely in the browser.
+An endless open-world racing festival (open-world festival style) that runs entirely in the browser.
 Plain static files: no build step, no server. Three.js loads from the jsDelivr CDN.
 
 ## Deploy to GitHub Pages
@@ -9,7 +9,6 @@ Plain static files: no build step, no server. Three.js loads from the jsDelivr C
 2. Repo **Settings > Pages > Build and deployment**: Source = *Deploy from a branch*, Branch = `main`, folder `/ (root)`.
 3. Open `https://<you>.github.io/<repo>/`.
 
-Optional: add `?user=<github-name>` to the URL (or type your name in the Repo Town tab) so your public repos become buildings. If the site is served from `<name>.github.io`, the name is picked up automatically.
 
 Local test: `python3 -m http.server` in this folder, then open http://localhost:8000 (ES modules do not work from `file://`).
 
@@ -18,13 +17,19 @@ Local test: `python3 -m http.server` in this folder, then open http://localhost:
 - Infinite procedural world (seeded): mountains, forests, deserts, lakes, snow, towns, paved and dirt road grids, ramps
 - Arcade-sim physics: tyre model, weight transfer, handbrake drifts, nitro, jumps, water
 - Day/night cycle (real clock or fast cycle), dynamic weather (rain, storm, fog, snow), seasons
-- Festival hub with ferris wheel and plaza; Repo Town builds your GitHub repos as buildings
+- Festival hub with ferris wheel and plaza; two buildings link to Iron Strike and NodeNGW
 - Events: street, circuit and cross-country races, drift zones, speed traps, speed zones, danger-sign jumps, bonus boards, barn finds
 - AI traffic and rivals, skill chains, XP, levels, credits, wheelspins
 - 10 cars, upgrades, AWD swap, paint, autoshow
 - Map with waypoints and fast travel, minimap, photo mode, rewind, 4 cameras
 - Synthesised engine sounds and 4 procedural radio stations
 - Keyboard, gamepad and touch controls; autosave, export/import
+
+## Extras
+
+- Online: Menu > Online. Host a room and share the 5-letter code (peer-to-peer via PeerJS; players get name tags).
+- Mod menu: type `supermod` while driving.
+- Rival bots steer with pure pursuit, avoid each other, and collide with you and with each other.
 
 ## Controls
 

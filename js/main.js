@@ -1,4 +1,4 @@
-// Horizon Pages - entry point. Wires renderer, world, physics, AI, events, audio and UI together.
+// Corsa Horizons - entry point. Wires renderer, world, physics, AI, events, audio and UI together.
 import * as THREE from 'three';
 import { initWorld, setSeason, world, heightAt, nearRoad, nearestRoadIndex, roadFrame, FAM } from './terrain.js';
 import { CarPhysics, deriveSpec, computePI, classOf, snapshot, restore } from './physics.js';
@@ -8,7 +8,11 @@ import { SkySystem, Weather } from './sky.js';
 import { AudioSys, STATIONS } from './audio.js';
 import { Traffic } from './ai.js';
 import { EventManager, clearPOICache } from './events.js';
-import { Festival, RepoTown, guessGithubUser } from './landmarks.js';
+import { Festival, RepoTown } from './landmarks.js';
+import { Net } from './net.js';
+import { ModMenu } from './mods.js';
+import { obb } from './collide.js';
+import { bumpPair } from './ai.js';
 import * as Save from './save.js';
 import { UI } from './ui.js';
 import { clamp, lerp, damp, angDiff, fmtNum } from './util.js';
@@ -79,7 +83,7 @@ class Game {
     const canvas = $('c');
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: (PRESETS[set.quality] || PRESETS.medium).aa, powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.0;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.08;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(set.fov, innerWidth / innerHeight, 0.4, 4200);
@@ -103,12 +107,12 @@ class Game {
     this.car = new CarPhysics(carById(st.current));
     this.applyQuality();
     this.applyCar(true);
+    await this.setupPost();
     this.setLoad(0.08, 'Raising the festival...');
     await frame();
     this.festival.build();
-    const user = guessGithubUser(set);
-    this.repoTown.user = user; this.repoTown.repos = []; this.repoTown.build();
-    this.repoTown.load(user).then(() => { this.updateTitleInfo(); });
+    this.repoTown.load();
+    this.net = new Net(this); this.mods = new ModMenu(this);
     this.placeOnRoad(world.festival.x - 125, world.festival.z, true);
     this.applySettings('weather'); this.applySettings('tod');
     await this.buildChunks();
@@ -119,6 +123,25 @@ class Game {
     this.mode = 'title'; this.last = performance.now();
     if ('ontouchstart' in window || navigator.maxTouchPoints > 1) $('touch').classList.remove('hidden');
     requestAnimationFrame((t) => this.loop(t));
+  }
+  async setupPost() {
+    try {
+      const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }, { OutputPass }, { RoomEnvironment }] = await Promise.all([
+        import('three/addons/postprocessing/EffectComposer.js'), import('three/addons/postprocessing/RenderPass.js'),
+        import('three/addons/postprocessing/UnrealBloomPass.js'), import('three/addons/postprocessing/OutputPass.js'),
+        import('three/addons/environments/RoomEnvironment.js')]);
+      const pm = new THREE.PMREMGenerator(this.renderer);
+      this.envTex = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose();
+      const comp = new EffectComposer(this.renderer);
+      comp.addPass(new RenderPass(this.scene, this.camera));
+      this.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.38, 0.65, 0.92);
+      comp.addPass(this.bloom); comp.addPass(new OutputPass());
+      this.composer = comp; this.resize();
+    } catch (e) { console.warn('Post-processing unavailable', e); this.composer = null; }
+  }
+  renderFrame() {
+    const p = PRESETS[this.state.settings.quality] || PRESETS.medium;
+    if (this.composer && p.shadow) this.composer.render(); else this.renderer.render(this.scene, this.camera);
   }
   setLoad(p, msg) { $('ldFill').style.width = (p * 100).toFixed(0) + '%'; if (msg) $('ldMsg').textContent = msg; }
   async buildChunks() {
@@ -133,15 +156,12 @@ class Game {
     }
     this.chunks.perFrame = pf;
   }
-  updateTitleInfo() {
-    const rt = this.repoTown, u = rt.user;
-    $('titleInfo').textContent = u ? (rt.status === 'ok' ? `Repo Town loaded for github.com/${u} (${rt.repos.length} repos)` : rt.status === 'loading' ? `Loading repos for ${u}...` : rt.status === 'error' ? `Could not load ${u}'s repos (${rt.error}) - using demo repos` : '') : 'Add ?user=yourname to the URL, or set it in Settings, to see your GitHub repos as buildings.';
-  }
+  updateTitleInfo() { $('titleInfo').textContent = 'Find Iron Strike and NodeNGW in the festival plaza. Type supermod for the mod menu.'; }
 
   // ---------- settings ----------
   applyQuality() {
     const p = PRESETS[this.state.settings.quality] || PRESETS.medium;
-    this.renderer.setPixelRatio(p.pr); this.renderer.setSize(innerWidth, innerHeight, false);
+    this.renderer.setPixelRatio(p.pr); this.renderer.setSize(innerWidth, innerHeight, false); if (this.composer) this.resize();
     this.chunks.setQuality(p.radius, p.pf, p.trees);
     this.sky.setViewDistance(p.view); this.sky.setShadows(!!p.shadow, p.shadow);
     this.sky.sun.shadow.camera.left = -(60 + p.radius * 8); this.sky.sun.shadow.camera.right = 60 + p.radius * 8; this.sky.sun.shadow.camera.top = 60 + p.radius * 8; this.sky.sun.shadow.camera.bottom = -(60 + p.radius * 8); this.sky.sun.shadow.camera.updateProjectionMatrix();
@@ -180,6 +200,7 @@ class Game {
     if (this.model) this.scene.remove(this.model.group);
     const m = buildCar(base, own.color); this.model = m;
     m.group.rotation.order = 'YXZ';
+    if (this.envTex) { const b = m.body; b.envMap = this.envTex; b.envMapIntensity = 0.9; b.roughness = 0.22; b.metalness = 0.65; }
     m.group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     this.headlight = new THREE.SpotLight(0xfff0d0, 0, 90, 0.5, 0.6, 1.2);
     this.headlight.position.set(0, 0.9, 1.8); this.headlight.target.position.set(0, 0, 22);
@@ -275,7 +296,7 @@ class Game {
     window.addEventListener('unhandledrejection', (e) => this.fatal(String(e.reason && e.reason.stack || e.reason)));
   }
   fatal(msg) { const f = $('fatal'); f.classList.remove('hidden'); f.innerHTML = `<b>Something went wrong</b><br><code>${String(msg).replace(/</g, '&lt;')}</code><br><button class="btn" onclick="this.parentNode.classList.add('hidden')">Dismiss</button>`; }
-  resize() { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); this.renderer.setSize(innerWidth, innerHeight, false); }
+  resize() { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); this.renderer.setSize(innerWidth, innerHeight, false); if (this.composer) { this.composer.setPixelRatio(this.renderer.getPixelRatio()); this.composer.setSize(innerWidth, innerHeight); this.bloom.resolution.set(innerWidth / 2, innerHeight / 2); } }
   start() {
     this.audio.init(); this.audio.setVolumes({}); this.audio.setStation(this.state.settings.radio || 0);
     $('title').classList.add('hidden'); $('hud').classList.remove('hidden'); this.mode = 'play'; this.last = performance.now();
@@ -322,8 +343,8 @@ class Game {
   }
   exitPhoto() { this.mode = 'play'; this.paused = false; this.hourOverride = null; this.ui.closePhoto(); this.camera.fov = this.state.settings.fov; this.camera.updateProjectionMatrix(); }
   capture() {
-    this.renderer.render(this.scene, this.camera);
-    $('c').toBlob((b) => { if (!b) return; const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `horizon-pages-${Date.now()}.png`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); });
+    this.renderFrame();
+    $('c').toBlob((b) => { if (!b) return; const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `corsa-horizons-${Date.now()}.png`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); });
     this.audio.blip('photo'); this.ui.toast('Photo saved', 'good');
   }
   readPad() {
@@ -377,12 +398,14 @@ class Game {
     this.festival.update(dt, this.time, this.sky.night);
     this.repoTown.update(dt, this.time, c);
     this.syncModel(dt);
+    if (this.net) this.net.update(dt);
     this.headlight.intensity = this.sky.night > 0.3 || this.weather.cur.fog > 0.4 ? 60 * Math.max(this.sky.night, 0.5) : 0;
     this.particles.update(dt);
     if (this.mode !== 'title') this.audio.update(c, this.weather, this.paused || this.mode !== 'play');
     this.audio.radioTick();
     if (this.mode === 'play' || this.mode === 'photo') { this.ui.hud(c, dt, this.time); this.mmT = (this.mmT || 0) + 1; if (this.mmT % 2 === 0) this.ui.drawMinimap(c, this.time); }
-    this.renderer.render(this.scene, this.camera);
+    this.renderFrame();
+    const fx = $('speedfx'); if (fx) fx.style.opacity = this.mode === 'play' ? clamp((c.kmh - 120) / 200, 0, 0.9) + (c.nitroOn ? 0.25 : 0) : 0;
   }
 
   simulate(dt) {
@@ -409,7 +432,9 @@ class Game {
       const wasNitro = c.nitroOn, wasGear = c.gear;
       const N = Math.max(1, Math.ceil(dt / (1 / 120))), h = dt / N;
       this.chunks.collidersNear(c.x, c.z, this.q);
-      for (let i = 0; i < N; i++) { c.step(h, ctl, this.weather.wet); this.collide(c); }
+      this.mods.tick();
+      const god = this.mods.f.god;
+      for (let i = 0; i < N; i++) { c.step(h, ctl, this.weather.wet); if (!god) this.collide(c); if (this.mods.f.boost && ctl.throttle > 0.1) c.u += 32 * h * ctl.throttle; }
       c.updateAttitude(dt);
       if (c.nitroOn && !wasNitro) this.audio.nitro();
       if (c.gear !== wasGear && c.gear > wasGear) this.audio.shift();
@@ -421,7 +446,7 @@ class Game {
     // events & AI
     this.events.update(dt, c, this.time);
     this.traffic.update(dt, c.x, c.z, this.qMul);
-    this.carVsAI(dt);
+    if (!this.mods.f.god) this.carVsAI(dt);
     this.nearSpin = Math.hypot(c.x - world.festival.x, c.z - world.festival.z) < 32 && !this.events.race;
     this.skillTick(dt);
     // stats
@@ -478,33 +503,37 @@ class Game {
     if (imp > 7) { if (this.skill.base > 0) this.ui.toast('Skill chain lost!', 'bad'); this.skillReset(); }
   }
   carVsAI(dt) {
-    const c = this.car, R = c.spec.W * 0.5 + 0.1;
+    const c = this.car, me = { x: c.x, z: c.z, yaw: c.yaw, L: c.spec.L, W: c.spec.W };
+    c.worldVel();
     for (const t of this.traffic.cars) {
-      const dx = t.x - c.x, dz = t.z - c.z, d = Math.hypot(dx, dz), min = c.spec.L * 0.42 + t.L * 0.42;
-      if (d > 12) continue;
-      if (d < min) {
-        const nx = dx / d, nz = dz / d, rel = (c.vx - (t.vx || Math.sin(t.yaw) * t.speed)) * nx + (c.vz - (t.vz || Math.cos(t.yaw) * t.speed)) * nz;
-        const push = Math.max(0, rel);
-        this.traffic.hit(t, nx, nz, push * 0.9 + 2);
-        c.x -= nx * (min - d) * 0.5; c.z -= nz * (min - d) * 0.5;
-        c.worldVel(); c.vx -= nx * push * 0.45; c.vz -= nz * push * 0.45; c.setWorldVel(c.vx, c.vz);
+      const d = Math.hypot(t.x - c.x, t.z - c.z); if (d > 14) continue;
+      const hit = obb(me, { x: t.x, z: t.z, yaw: t.yaw, L: t.L, W: t.W });
+      if (hit) {
+        const tvx = t.state === 'drive' ? Math.sin(t.yaw) * t.speed : t.vx, tvz = t.state === 'drive' ? Math.cos(t.yaw) * t.speed : t.vz;
+        const rel = (c.vx - tvx) * hit.nx + (c.vz - tvz) * hit.nz, push = Math.max(0, rel);
+        this.traffic.hit(t, hit.nx, hit.nz, push * 0.9 + 2);
+        c.x -= hit.nx * (hit.depth * 0.55 + 0.02); c.z -= hit.nz * (hit.depth * 0.55 + 0.02);
+        t.x += hit.nx * hit.depth * 0.45; t.z += hit.nz * hit.depth * 0.45;
+        if (push > 0) { c.vx -= hit.nx * push * 0.5; c.vz -= hit.nz * push * 0.5; c.setWorldVel(c.vx, c.vz); c.worldVel(); }
         if (push > 3) this.crash(push);
         t.near = false; t.passed = true;
       } else if (t.state === 'drive') {
-        if (d < 4.2 && c.speed > 16) t.near = true;
-        else if (t.near && d > 5.5 && !t.passed) { t.passed = true; this.state.stats.nearMiss++; this.skillAdd('Near Miss', 400, 'near'); this.audio.blip('coin'); }
+        if (d < 4.6 && c.speed > 16) t.near = true;
+        else if (t.near && d > 6 && !t.passed) { t.passed = true; this.state.stats.nearMiss++; this.skillAdd('Near Miss', 400, 'near'); this.audio.blip('coin'); }
       }
     }
-    for (const r of this.events.rivalsList()) {
-      const dx = r.x - c.x, dz = r.z - c.z, d = Math.hypot(dx, dz), min = c.spec.L * 0.42 + r.L * 0.42;
-      if (d < min && d > 0.01) {
-        const nx = dx / d, nz = dz / d;
-        c.x -= nx * (min - d) * 0.6; c.z -= nz * (min - d) * 0.6;
-        c.worldVel(); const rel = c.vx * nx + c.vz * nz;
-        if (rel > 0) { c.vx -= nx * rel * 0.5; c.vz -= nz * rel * 0.5; c.setWorldVel(c.vx, c.vz); }
-        r.bump = Math.min(1.5, r.bump + 0.8); r.vx += nx * 0.05; r.vz += nz * 0.05;
-        if (rel > 4) this.crash(rel * 0.6);
-      }
+    const bodies = [...this.events.rivalsList(), ...(this.net ? [...this.net.remotes.values()] : [])];
+    for (const r of bodies) {
+      const hit = obb(me, { x: r.x, z: r.z, yaw: r.yaw, L: r.L, W: r.W });
+      if (!hit) continue;
+      const rvx = Math.sin(r.yaw) * r.speed, rvz = Math.cos(r.yaw) * r.speed;
+      const rel = (c.vx - rvx) * hit.nx + (c.vz - rvz) * hit.nz;
+      c.x -= hit.nx * (hit.depth * 0.5 + 0.02); c.z -= hit.nz * (hit.depth * 0.5 + 0.02);
+      // both cars lose speed and get shoved sideways
+      if (rel > 0) { c.vx -= hit.nx * rel * 0.55; c.vz -= hit.nz * rel * 0.55; c.setWorldVel(c.vx, c.vz); c.worldVel(); }
+      c.u *= 0.95; c.r += (Math.random() - 0.5) * 0.4;
+      bumpPair({ x: 0, z: 0, vx: 0, vz: 0, speed: 0 }, r, { nx: hit.nx, nz: hit.nz, depth: hit.depth * 0.5 });
+      if (rel > 3) this.crash(rel * 0.5);
     }
   }
   skillTick(dt) {

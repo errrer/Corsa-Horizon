@@ -1,4 +1,4 @@
-// Permanent landmarks: the Horizon Pages Festival plaza and the GitHub "Repo Town" district.
+// Permanent landmarks: the Corsa Horizons Festival plaza and the GitHub "Repo Town" district.
 import * as THREE from 'three';
 import { world, nearRoad, heightAt, roadFrame, FAM } from './terrain.js';
 import { GeoBuilder, makeSignTex } from './chunks.js';
@@ -46,7 +46,7 @@ export class Festival {
       const g = new THREE.Group(), yaw = face(st.x, st.z);
       const base = new THREE.Mesh(new THREE.BoxGeometry(34, 2.6, 16), std(0x21262d)); base.position.y = 1.3; base.castShadow = true; g.add(base);
       const wall = new THREE.Mesh(new THREE.BoxGeometry(34, 14, 1), std(0x0d1117)); wall.position.set(0, 9.6, -7.5); g.add(wall);
-      const screenMat = new THREE.MeshStandardMaterial({ map: makeSignTex('HORIZON PAGES FESTIVAL', '#0d1117', '#ffffff', '#58a6ff'), emissiveMap: null, emissive: 0x222233, roughness: 0.3 });
+      const screenMat = new THREE.MeshStandardMaterial({ map: makeSignTex('CORSA HORIZONS FESTIVAL', '#0d1117', '#ffffff', '#58a6ff'), emissiveMap: null, emissive: 0x222233, roughness: 0.3 });
       const screen = new THREE.Mesh(new THREE.PlaneGeometry(26, 9.7), screenMat); screen.position.set(0, 9.8, -6.9); g.add(screen); this.anim.screen = screenMat;
       for (const s of [-1, 1]) {
         const sp = new THREE.Mesh(new THREE.BoxGeometry(3, 8, 3), std(0x111111)); sp.position.set(s * 18.5, 4, -3); g.add(sp);
@@ -108,7 +108,7 @@ export class Festival {
     }
     // gate arches across the main roads
     const fr = {};
-    for (const [fam, t0, name] of [[0, f.x + 55, 'HORIZON PAGES FESTIVAL'], [1, f.z - 55, 'WELCOME - git checkout fun'], [0, f.x - 55, 'MERGE EARLY, MERGE OFTEN'], [1, f.z + 55, 'SHIP IT!']]) {
+    for (const [fam, t0, name] of [[0, f.x + 55, 'CORSA HORIZONS FESTIVAL'], [1, f.z - 55, 'WELCOME - git checkout fun'], [0, f.x - 55, 'MERGE EARLY, MERGE OFTEN'], [1, f.z + 55, 'SHIP IT!']]) {
       roadFrame(fam, 0, t0, fr);
       const g = new THREE.Group(), w = FAM[fam].w + 3;
       for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(1.1, 11, 1.1), glow(0x58a6ff, 0.5)); p.position.set(s * w, 5.5, 0); g.add(p); E.circles.push([fr.x + fr.nx * s * w, fr.z + fr.nz * s * w, 0.9]); }
@@ -143,9 +143,10 @@ export class Festival {
 
 // ---------- GitHub Repo Town ----------
 const LANG = { JavaScript: 0xf1e05a, TypeScript: 0x3178c6, Python: 0x3572a5, HTML: 0xe34c26, CSS: 0x563d7c, Java: 0xb07219, C: 0x888888, 'C++': 0xf34b7d, 'C#': 0x178600, Rust: 0xdea584, Go: 0x00add8, Shell: 0x89e051, Lua: 0x4a4aff, Kotlin: 0xa97bff, Swift: 0xf05138, Ruby: 0xcc342d, PHP: 0x4f5d95, Dart: 0x00b4ab, Vue: 0x41b883, SCSS: 0xc6538c, 'Jupyter Notebook': 0xda5b0b };
-export const DEMO_REPOS = ['horizon-pages', 'portfolio', 'dotfiles', 'my-first-game', 'api-server', 'notes', 'shaders', 'cli-tools', 'blog', 'ml-experiments'].map((name, i) => ({
-  name, desc: 'Demo repository (connect your GitHub username in Settings to see yours).', stars: [42, 12, 3, 7, 1, 0, 19, 5, 2, 0][i], forks: i % 4, lang: ['JavaScript', 'HTML', 'Shell', 'JavaScript', 'Python', 'Rust', 'TypeScript', 'Go', 'CSS', 'Python'][i], url: 'https://github.com', pages: i % 3 === 0, site: '', updated: '', size: 400 * (i + 1), demo: true,
-}));
+export const FEATURED = [
+  { name: 'Iron Strike', desc: 'COD-style 3D browser FPS built with Three.js.', stars: 40, forks: 4, lang: 'JavaScript', url: 'https://github.com/errrer/Iron-Strike-Testing', pages: true, site: 'https://errrer.github.io/Iron-Strike-Testing/', updated: '', size: 9000 },
+  { name: 'NodeNGW', desc: 'BeamNG-style soft-body driving game for the browser.', stars: 40, forks: 4, lang: 'JavaScript', url: 'https://github.com/errrer/NodeNGW', pages: true, site: 'https://errrer.github.io/NodeNGW/', updated: '', size: 9000 },
+];
 
 export function guessGithubUser(settings) {
   const q = new URLSearchParams(location.search).get('user');
@@ -161,31 +162,7 @@ export class RepoTown {
     this.scene = scene; this.chunks = chunks; this.mats = mats; this.festival = festival;
     this.group = new THREE.Group(); scene.add(this.group); this.repos = []; this.items = []; this.user = ''; this.status = 'idle'; this.near = null; this.rings = [];
   }
-  async load(user, force = false) {
-    this.user = user;
-    if (!user) { this.repos = DEMO_REPOS; this.status = 'demo'; this.build(); return; }
-    const ck = 'hp.repos.' + user.toLowerCase();
-    try {
-      const c = JSON.parse(localStorage.getItem(ck) || 'null');
-      if (c && !force && Date.now() - c.t < 3600e3) { this.repos = c.repos; this.status = 'ok'; this.build(); return; }
-    } catch (e) { /* ignore */ }
-    this.status = 'loading';
-    try {
-      const res = await fetch(`https://api.github.com/users/${encodeURIComponent(user)}/repos?per_page=100&sort=pushed`, { headers: { Accept: 'application/vnd.github+json' } });
-      if (!res.ok) throw new Error(res.status === 404 ? 'User not found' : res.status === 403 ? 'GitHub rate limit reached - try later' : 'GitHub error ' + res.status);
-      const data = await res.json();
-      this.repos = data.filter((r) => !r.archived || true).map((r) => ({
-        name: r.name, desc: r.description || 'No description yet.', stars: r.stargazers_count, forks: r.forks_count, lang: r.language || '', url: r.html_url,
-        pages: !!r.has_pages, site: r.homepage || '', updated: r.pushed_at ? r.pushed_at.slice(0, 10) : '', size: r.size || 0, fork: !!r.fork,
-      }));
-      if (!this.repos.length) throw new Error('This user has no public repositories');
-      try { localStorage.setItem(ck, JSON.stringify({ t: Date.now(), repos: this.repos })); } catch (e) { /* ignore */ }
-      this.status = 'ok';
-    } catch (e) {
-      this.repos = DEMO_REPOS; this.status = 'error'; this.error = e.message || String(e);
-    }
-    this.build();
-  }
+  async load() { this.user = 'errrer'; this.repos = FEATURED; this.status = 'ok'; this.build(); }
   siteUrl(r) {
     if (r.site && /^https?:\/\//.test(r.site)) return r.site;
     if (!r.pages) return '';
@@ -213,14 +190,14 @@ export class RepoTown {
       }
     }
     this.repos.slice(0, slots.length).forEach((r, i) => {
-      const s = slots[i], w = 12, h = 10 + Math.min(34, Math.log2(1 + r.stars) * 6 + Math.log10(1 + r.size) * 2.5);
+      const s = slots[Math.floor((i * slots.length) / Math.max(1, this.repos.length))], w = 12, h = 10 + Math.min(34, Math.log2(1 + r.stars) * 6 + Math.log10(1 + r.size) * 2.5);
       const base = hexRGB(LANG[r.lang] || 0x8b949e), c = base.map((v) => lin(v * 0.7 + 0.3 * 0.9));
       const y0 = Math.min(heightAt(s.x - 6, s.z - 6), heightAt(s.x + 6, s.z + 6), heightAt(s.x, s.z)) - 2;
       const yaw = Math.atan2(f.x - s.x, f.z - s.z);
       bg.box(s.x, y0, s.z, w, h + (heightAt(s.x, s.z) - y0), w, yaw, c, 1);
       const fx = Math.sin(yaw), fz = Math.cos(yaw), gy = heightAt(s.x, s.z);
       // sign
-      const tex = makeSignTex(`${r.name}  *${r.stars}`, '#0d1117', '#e6edf3', r.lang ? '#' + (LANG[r.lang] || 0x8b949e).toString(16).padStart(6, '0') : '#8b949e');
+      const tex = makeSignTex(r.name, '#0d1117', '#e6edf3', r.lang ? '#' + (LANG[r.lang] || 0x8b949e).toString(16).padStart(6, '0') : '#8b949e');
       const sign = new THREE.Mesh(new THREE.PlaneGeometry(10, 3.4), new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.35, side: THREE.DoubleSide }));
       sign.position.set(s.x + fx * (w / 2 + 0.15), gy + 4.2, s.z + fz * (w / 2 + 0.15)); sign.rotation.y = yaw; this.group.add(sign);
       const door = { x: s.x + fx * (w / 2 + 5), z: s.z + fz * (w / 2 + 5) };

@@ -2,7 +2,7 @@
 // small procedural radio with several stations.
 export const STATIONS = [
   { name: 'Radio Off', bpm: 0 },
-  { name: 'Pages FM 101.1 - Synthwave', bpm: 108, root: 45, scale: [0, 3, 5, 7, 10], prog: [0, -4, -2, -5], style: 'synth' },
+  { name: 'Corsa FM 101.1 - Synthwave', bpm: 108, root: 45, scale: [0, 3, 5, 7, 10], prog: [0, -4, -2, -5], style: 'synth' },
   { name: 'Commit Beats - Four on the Floor', bpm: 124, root: 40, scale: [0, 2, 3, 5, 7, 8, 10], prog: [0, 0, -2, -4], style: 'house' },
   { name: 'Merge Lo-fi - Chill Hop', bpm: 76, root: 43, scale: [0, 2, 4, 7, 9], prog: [0, 5, -3, -5], style: 'lofi' },
   { name: 'Hotfix Radio - Breakbeat', bpm: 140, root: 38, scale: [0, 1, 4, 5, 7, 8], prog: [0, 0, 1, -2], style: 'break' },

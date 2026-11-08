@@ -4,7 +4,7 @@ const KEY = 'horizonPages.save.v1';
 export const SETTINGS_DEFAULT = {
   quality: 'medium', units: 'kmh', traffic: 2, master: 0.7, music: 0.5, sfx: 0.8, fov: 68, cam: 0,
   tod: 'real', todSpeed: 1, weather: 'auto', season: 'auto', difficulty: 1, drive: 'left', seed: 1337,
-  github: '', radio: 0, abs: true, tcs: true, stm: true, line: true, auto: true, shake: true, hints: true,
+  github: '', name: 'Racer', radio: 0, abs: true, tcs: true, stm: true, line: true, auto: true, shake: true, hints: true,
 };
 export function defaults() {
   return {
@@ -32,7 +32,7 @@ export function wipe() { try { localStorage.removeItem(KEY); } catch (e) { /* ig
 export const exportSave = (state) => JSON.stringify(state);
 export function importSave(text) {
   const s = JSON.parse(text);
-  if (!s || typeof s !== 'object' || !s.cars) throw new Error('Not a Horizon Pages save');
+  if (!s || typeof s !== 'object' || !s.cars) throw new Error('Not a Corsa Horizons save');
   return { ...defaults(), ...s, settings: { ...SETTINGS_DEFAULT, ...(s.settings || {}) }, stats: { ...defaults().stats, ...(s.stats || {}) } };
 }
 
@@ -66,5 +66,5 @@ export const ACHIEVEMENTS = [
   { id: 'barn', name: 'Barn Find!', desc: 'Discover a barn find', test: (s) => Object.keys(s.barns).length >= 1 },
   { id: 'km100', name: 'Long Haul', desc: 'Drive 100 km', test: (s) => s.stats.km >= 100 },
   { id: 'skill', name: 'Skill Chain', desc: 'Bank a 100,000 point chain', test: (s) => s.stats.skillBest >= 100000 },
-  { id: 'repo', name: 'Visit Repo Town', desc: 'Visit a repo in Repo Town', test: (s) => Object.keys(s.repos).length >= 1 },
+  { id: 'repo', name: 'Game Night', desc: 'Visit Iron Strike or NodeNGW', test: (s) => Object.keys(s.repos).length >= 1 },
 ];

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { buildCar, buildTraffic, TRAFFIC_KINDS, CARS, PAINTS } from './cars.js';
 import { heightAt, roadFrame, nearestRoadIndex, FAM } from './terrain.js';
 import { clamp, lerp, damp, angDiff, TAU } from './util.js';
+import { makeTag } from './tags.js';
 
 const TCOL = [0xdfe3e8, 0x1c2128, 0x8b949e, 0xc9d1d9, 0x1f6feb, 0xb62324, 0x2ea043, 0xd29922, 0x6e7681, 0xf0f3f6];
 
@@ -74,62 +75,117 @@ export class Traffic {
 }
 
 // ---------- rivals ----------
+// Rivals are real dynamic drivers: they find their progress on the route, steer with pure pursuit toward a
+// look-ahead point, brake for corners, avoid other cars and can be bumped around.
 export class Rival {
   constructor(scene, route, grid, spec, color, skill) {
     this.scene = scene; this.route = route; this.spec = spec;
     const m = buildCar(spec, color);
     m.group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     this.group = m.group; this.wheels = m.wheels; this.tail = m.tail;
-    this.L = m.group.userData.L; this.W = m.group.userData.W;
-    this.s = grid.s; this.off = grid.off; this.speed = 0; this.skill = skill; this.name = grid.name;
-    this.x = 0; this.z = 0; this.yaw = 0; this.finished = false; this.finishT = 0; this.wrot = 0; this.lap = 0;
-    this.noise = Math.random() * 100; this.vx = 0; this.vz = 0; this.bump = 0;
+    this.L = m.group.userData.L; this.W = m.group.userData.W; this.wb = spec.wb || this.L * 0.63;
+    this.skill = skill; this.name = grid.name; this.off = grid.off; this.offT = grid.off;
+    this.speed = 0; this.yr = 0; this.finished = false; this.finishT = 0; this.wrot = 0; this.lap = 0; this.s = 0;
+    this.noise = Math.random() * 100; this.vx = 0; this.vz = 0; this.bump = 0; this.idx = 0; this.stuck = 0;
+    this.idx = clamp(Math.round(grid.s / route.step), 0, route.pts.length - 2);
+    const p = this.sample(grid.s), nx = Math.cos(p.yaw), nz = -Math.sin(p.yaw);
+    this.x = p.x + nx * grid.off; this.z = p.z + nz * grid.off; this.yaw = p.yaw;
+    this.tag = makeTag(grid.name, '#f0883e'); this.tag.position.set(0, (spec.H || 1.5) + 1.2, 0); this.group.add(this.tag);
     scene.add(this.group);
-    this.sync(0);
+    pose(this.group, this.x, this.z, this.yaw, this.L);
   }
   sample(s) {
     const r = this.route, n = r.pts.length;
     let f = s / r.step; let i = Math.floor(f);
-    const loop = r.loop;
-    if (loop) { i = ((i % (n - 1)) + (n - 1)) % (n - 1); } else i = clamp(i, 0, n - 2);
+    if (r.loop) i = ((i % (n - 1)) + (n - 1)) % (n - 1); else i = clamp(i, 0, n - 2);
     const t = clamp(f - Math.floor(f), 0, 1), a = r.pts[i], b = r.pts[(i + 1) % n];
     return { x: lerp(a.x, b.x, t), z: lerp(a.z, b.z, t), yaw: a.yaw, curv: a.curv };
   }
-  sync(dt) {
-    const p = this.sample(this.s);
-    const nx = Math.cos(p.yaw), nz = -Math.sin(p.yaw);
-    const targetX = p.x + nx * this.off, targetZ = p.z + nz * this.off;
-    this.x = targetX + this.vx; this.z = targetZ + this.vz;
-    const yawT = p.yaw;
-    this.yaw = this.yaw + angDiff(this.yaw, yawT) * Math.min(1, dt * 8 + (dt === 0 ? 1 : 0));
-    pose(this.group, this.x, this.z, this.yaw, this.L);
-    this.wrot += this.speed / 0.33 * dt; spinWheels(this.wheels, this.wrot);
+  track() {
+    const r = this.route, n = r.pts.length, N = n - 1;
+    let best = 1e12, bi = this.idx;
+    for (let k = -3; k <= 14; k++) {
+      let i = this.idx + k;
+      if (r.loop) i = ((i % N) + N) % N; else if (i < 0 || i > n - 2) continue;
+      const p = r.pts[i], d = (p.x - this.x) ** 2 + (p.z - this.z) ** 2;
+      if (d < best) { best = d; bi = i; }
+    }
+    if (r.loop) { if (this.idx > N * 0.85 && bi < N * 0.15) this.lap++; else if (this.idx < N * 0.15 && bi > N * 0.85) this.lap--; }
+    this.idx = bi; this.offRoute = Math.sqrt(best);
+    const a = r.pts[bi], b = r.pts[(bi + 1) % n], st2 = r.step * r.step;
+    const t = clamp(((this.x - a.x) * (b.x - a.x) + (this.z - a.z) * (b.z - a.z)) / st2, 0, 1);
+    this.sLocal = (bi + t) * r.step;
+    this.s = (r.loop ? this.lap * r.len : 0) + this.sLocal;
   }
   update(dt, ctx) {
     const r = this.route;
-    // look ahead for the tightest corner and pick a safe speed
+    this.track();
+    const sp = this.speed;
+    // ---- corner speed from the tightest curve ahead ----
     let vCorner = 999;
-    for (let k = 0; k < 6; k++) {
-      const p = this.sample(this.s + 8 + k * 14);
-      const v = Math.sqrt((14 + 6 * this.skill) / Math.max(p.curv, 0.0008));
+    for (let k = 0; k < 7; k++) {
+      const p = this.sample(this.sLocal + 6 + k * 13);
+      const v = Math.sqrt((15 + 7 * this.skill) / Math.max(p.curv, 0.0008));
       if (v < vCorner) vCorner = v;
     }
+    // ---- avoidance: shift sideways around cars ahead, slow if too close ----
+    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw), rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw);
+    let wantOff = this.off, slow = 1;
+    for (const o of ctx.others || []) {
+      if (o === this) continue;
+      const dx = o.x - this.x, dz = o.z - this.z, ahead = dx * fx + dz * fz, side = dx * rx + dz * rz;
+      if (ahead > 0 && ahead < 26 && Math.abs(side) < 3.4) {
+        wantOff += (side > 0 ? -1 : 1) * 3.2 * (1 - ahead / 26);
+        if (ahead < 12 && sp > (o.speed || 0)) slow = Math.min(slow, 0.55 + ahead / 40);
+      }
+    }
+    this.offT = damp(this.offT, clamp(wantOff, -6, 6), 2.5, dt);
+    // ---- pure pursuit ----
+    const Ld = clamp(7 + sp * 0.5, 9, 45);
+    const tp = this.sample(this.sLocal + Ld), nx = Math.cos(tp.yaw), nz = -Math.sin(tp.yaw);
+    const tx = tp.x + nx * this.offT, tz = tp.z + nz * this.offT;
+    const alpha = angDiff(this.yaw, Math.atan2(tx - this.x, tz - this.z));
+    let yrT = (Math.max(sp, 3) * 2 * Math.sin(alpha)) / Ld;
+    const maxLat = (11 + 5 * this.skill) * (1 + (this.spec.mu ? (this.spec.mu - 1.1) * 0.8 : 0));
+    const yrMax = maxLat / Math.max(sp, 4);
+    yrT = clamp(yrT, -yrMax, yrMax);
+    this.yr = damp(this.yr, yrT, 9, dt);
+    this.yaw += this.yr * dt;
+    // ---- speed ----
     const gapToPlayer = this.s - ctx.playerS;
     let rubber = 1;
     if (ctx.rubber) { if (gapToPlayer > 100) rubber = 1 - clamp((gapToPlayer - 100) / 600, 0, 0.12); else if (gapToPlayer < -60) rubber = 1 + clamp((-gapToPlayer - 60) / 500, 0, 0.09); }
-    let target = Math.min(ctx.cruise * this.skill * rubber * (0.97 + 0.03 * Math.sin(this.noise + ctx.t * 0.4)), vCorner * (0.9 + this.skill * 0.1));
+    let target = Math.min(ctx.cruise * this.skill * rubber * (0.97 + 0.03 * Math.sin(this.noise + ctx.t * 0.4)), vCorner * (0.9 + this.skill * 0.1)) * slow;
+    target *= clamp(1.15 - Math.abs(alpha) * 0.9, 0.25, 1);
     if (ctx.hold) target = 0;
-    const acc = target > this.speed ? 8.5 : 16;
-    this.speed += clamp(target - this.speed, -acc * dt, acc * dt);
-    this.speed *= 1 - this.bump * dt; this.bump = Math.max(0, this.bump - dt * 2);
-    this.s += this.speed * dt;
-    this.vx *= Math.exp(-3 * dt); this.vz *= Math.exp(-3 * dt);
+    const acc = target > sp ? 8.5 : 18;
+    this.speed += clamp(target - sp, -acc * dt, acc * dt);
+    this.speed *= 1 - Math.min(0.9, this.bump) * dt; this.bump = Math.max(0, this.bump - dt * 1.5);
+    // ---- integrate (heading motion + decaying collision impulse) ----
+    this.x += (Math.sin(this.yaw) * this.speed + this.vx) * dt; this.z += (Math.cos(this.yaw) * this.speed + this.vz) * dt;
+    const k = Math.exp(-2.6 * dt); this.vx *= k; this.vz *= k;
+    // stuck recovery
+    if (!ctx.hold && !this.finished && this.speed < 1.5) { this.stuck += dt; if (this.stuck > 3.5) { const p = this.sample(this.sLocal + 4); this.x = p.x; this.z = p.z; this.yaw = p.yaw; this.speed = 6; this.stuck = 0; } } else this.stuck = 0;
+    if (this.offRoute > 90) { const p = this.sample(this.sLocal); this.x = p.x; this.z = p.z; this.yaw = p.yaw; }
     if (!r.loop && this.s >= r.len && !this.finished) { this.finished = true; this.finishT = ctx.t; }
     if (r.loop && this.s >= r.len * r.laps && !this.finished) { this.finished = true; this.finishT = ctx.t; }
-    if (this.finished) { this.speed *= Math.exp(-1.2 * dt); if (!r.loop) this.s = Math.min(this.s, r.len + 40); }
-    this.sync(dt);
+    if (this.finished) this.speed *= Math.exp(-1.2 * dt);
+    pose(this.group, this.x, this.z, this.yaw, this.L);
+    this.wrot += this.speed / 0.33 * dt; spinWheels(this.wheels, this.wrot);
+    for (const w of this.wheels) if (w.front) w.pivot.rotation.y = clamp(this.yr * this.wb / Math.max(this.speed, 3), -0.5, 0.5);
+    if (this.tail) this.tail.emissiveIntensity = target < sp - 1 ? 2.4 : 0.6;
   }
   dispose() { this.scene.remove(this.group); }
+}
+
+// Car-vs-car collision between two rivals (or any {x,z,vx,vz,speed,bump} bodies): separate, exchange impulse, both slow down.
+export function bumpPair(a, b, hit) {
+  const h = hit.depth * 0.5 + 0.02;
+  a.x -= hit.nx * h; a.z -= hit.nz * h; b.x += hit.nx * h; b.z += hit.nz * h;
+  const sa = a.speed || 0, sb = b.speed || 0;
+  const rel = Math.abs(sa - sb) * 0.5 + 1.5;
+  a.vx -= hit.nx * rel * 0.6; a.vz -= hit.nz * rel * 0.6; b.vx += hit.nx * rel * 0.6; b.vz += hit.nz * rel * 0.6;
+  a.speed *= 0.9; b.speed *= 0.9; a.bump = Math.min(1.5, (a.bump || 0) + 0.6); b.bump = Math.min(1.5, (b.bump || 0) + 0.6);
 }
 
 export const randomRivalSpec = (rnd) => CARS[Math.floor(rnd() * CARS.length)];

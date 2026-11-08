@@ -4,21 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#0d1117">
-<title>Horizon Pages - open-world racing for GitHub Pages</title>
+<title>Corsa Horizons - open-world racing for GitHub Pages</title>
 <meta name="description" content="An endless open-world racing festival that runs entirely in your browser. Host it on GitHub Pages.">
 <link rel="stylesheet" href="style.css">
 <script type="importmap">
-{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
 </script>
 </head>
 <body>
 <canvas id="c"></canvas>
+<div id="speedfx"></div><div id="vig"></div>
 
-<div id="loading"><div class="ld-box"><div class="ld-title">HORIZON PAGES</div><div id="ldMsg">Resolving merge conflicts...</div><div class="ld-bar"><div id="ldFill"></div></div></div></div>
+<div id="loading"><div class="ld-box"><div class="ld-title">CORSA HORIZONS</div><div id="ldMsg">Resolving merge conflicts...</div><div class="ld-bar"><div id="ldFill"></div></div></div></div>
 
 <div id="title" class="hidden">
   <div class="t-card">
-    <div class="t-logo">HORIZON<span>PAGES</span></div>
+    <div class="t-logo">CORSA<span>HORIZONS</span></div>
     <div class="t-sub">An endless open-world racing festival that lives in a static web page.<br>No install. No server. Just <code>git push</code>.</div>
     <div class="t-row"><button class="btn big" data-act="start">Start Driving</button></div>
     <div class="t-row small" id="titleInfo"></div>

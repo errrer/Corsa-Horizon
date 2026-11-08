@@ -3,7 +3,8 @@
 import * as THREE from 'three';
 import { S, FAM, world, roadFrame, roadOther, intersection, heightAt, getRamp, nearRoad, surfaceAt, SURF } from './terrain.js';
 import { hash2, mulberry32, clamp, lerp, angDiff, fmtTime, pick } from './util.js';
-import { Rival, randomRivalSpec, randomPaint } from './ai.js';
+import { Rival, randomRivalSpec, randomPaint, bumpPair } from './ai.js';
+import { obb } from './collide.js';
 import { CARS } from './cars.js';
 
 export const TYPES = {
@@ -444,7 +445,13 @@ export class EventManager {
       if (sec !== R.lastBeep) { R.lastBeep = sec; if (sec > 0 && sec <= 3) { g.ui.countdown(String(sec)); g.audio.blip('beep'); } }
       if (R.cd <= 0) { R.state = 'run'; R.t = 0; this.locked = false; g.ui.countdown('GO!'); g.audio.blip('go'); }
     }
-    for (const v of R.rivals) v.update(dt, { playerS: R.ps, cruise: R.cruise, rubber: true, t: R.t, hold: R.state === 'count' });
+    const others = [{ x: car.x, z: car.z, speed: car.speed }, ...R.rivals];
+    const hold = R.state === 'count' || (g.mods && g.mods.f.freeze);
+    for (const v of R.rivals) v.update(dt, { playerS: R.ps, cruise: R.cruise, rubber: true, t: R.t, hold, others });
+    for (let i = 0; i < R.rivals.length; i++) for (let j = i + 1; j < R.rivals.length; j++) {
+      const a = R.rivals[i], b = R.rivals[j], hit = obb(a, b);
+      if (hit) bumpPair(a, b, hit);
+    }
     // gates for the next checkpoints
     const next = R.cps[R.cp], last = R.cp === R.cps.length - 1;
     if (next !== undefined && R.state !== 'done') {
