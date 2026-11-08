@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0d1117">
+<title>Horizon Pages - open-world racing for GitHub Pages</title>
+<meta name="description" content="An endless open-world racing festival that runs entirely in your browser. Host it on GitHub Pages.">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="loading"><div class="ld-box"><div class="ld-title">HORIZON PAGES</div><div id="ldMsg">Resolving merge conflicts...</div><div class="ld-bar"><div id="ldFill"></div></div></div></div>
+
+<div id="title" class="hidden">
+  <div class="t-card">
+    <div class="t-logo">HORIZON<span>PAGES</span></div>
+    <div class="t-sub">An endless open-world racing festival that lives in a static web page.<br>No install. No server. Just <code>git push</code>.</div>
+    <div class="t-row"><button class="btn big" data-act="start">Start Driving</button></div>
+    <div class="t-row small" id="titleInfo"></div>
+    <div class="t-keys">
+      <b>W A S D / Arrows</b> drive &nbsp; <b>Space</b> handbrake &nbsp; <b>Shift</b> nitro &nbsp; <b>C</b> camera &nbsp; <b>G</b> rewind<br>
+      <b>M</b> map &nbsp; <b>Esc</b> menu &nbsp; <b>Enter</b> start event &nbsp; <b>R</b> radio &nbsp; <b>P</b> photo mode &nbsp; Gamepad &amp; touch supported
+    </div>
+  </div>
+</div>
+
+<div id="hud" class="hidden">
+  <div id="topleft">
+    <div class="lvlrow"><span id="lvl">LV 1</span><div class="xpbar"><div id="xpFill"></div></div></div>
+    <div id="credits">0 CR</div>
+    <div id="spinsBadge" class="hidden"></div>
+  </div>
+  <div id="skill" class="hidden"><div id="skScore">0</div><div id="skMult"></div><div class="skbar"><div id="skFill"></div></div><div id="skLines"></div></div>
+  <div id="topright"><div id="clock">12:00</div><div id="wxIcon">Clear</div><div id="roadName"></div></div>
+  <canvas id="mini" width="220" height="220"></canvas>
+  <div id="compass"></div>
+  <div id="evhud" class="hidden"></div>
+  <div id="speedo">
+    <canvas id="gauge" width="260" height="260"></canvas>
+    <div id="speed">0</div><div id="unit">KM/H</div><div id="gear">N</div>
+    <div id="nitro"><div id="nitroFill"></div></div>
+    <div id="carName"></div>
+  </div>
+  <div id="prompt" class="hidden"></div>
+  <div id="countdown"></div>
+  <div id="banner" class="hidden"><div id="bnT"></div><div id="bnS"></div></div>
+  <div id="toasts"></div>
+  <div id="radio" class="hidden"></div>
+  <div id="rewind" class="hidden">REWIND</div>
+  <div id="hint"></div>
+</div>
+
+<div id="menu" class="hidden"><div id="menuWin"><div id="tabs"></div><div id="menuBody"></div></div></div>
+<div id="overlay" class="hidden"></div>
+<div id="photo" class="hidden"></div>
+
+<div id="touch" class="hidden">
+  <div class="tpad left"><button id="tLeft">&#9664;</button><button id="tRight">&#9654;</button></div>
+  <div class="tpad right"><button id="tBrake">BRAKE</button><button id="tGas">GAS</button></div>
+  <div class="tmid"><button id="tHand">HAND</button><button id="tNitro">NITRO</button><button id="tCam">CAM</button><button id="tMenu">MENU</button></div>
+</div>
+
+<div id="fatal" class="hidden"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
