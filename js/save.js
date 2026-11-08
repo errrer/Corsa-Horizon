@@ -32,7 +32,7 @@ export function wipe() { try { localStorage.removeItem(KEY); } catch (e) { /* ig
 export const exportSave = (state) => JSON.stringify(state);
 export function importSave(text) {
   const s = JSON.parse(text);
-  if (!s || typeof s !== 'object' || !s.cars) throw new Error('Not a Corsa Horizons save');
+  if (!s || typeof s !== 'object' || !s.cars) throw new Error('Not a Horizon Pages save');
   return { ...defaults(), ...s, settings: { ...SETTINGS_DEFAULT, ...(s.settings || {}) }, stats: { ...defaults().stats, ...(s.stats || {}) } };
 }
 

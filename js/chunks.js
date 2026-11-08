@@ -125,7 +125,7 @@ function noiseFill(ctx, w, h, base, amp, count) {
     ctx.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 2);
   }
 }
-export const BOARD_TEXTS = ['SHIP IT!', 'git commit -m "vibes"', 'CORSA FM 101.1', 'MERGE EARLY, MERGE OFTEN', 'CORSA HORIZONS FESTIVAL', '404: SPEED LIMIT NOT FOUND', 'BUILD PASSING', 'FORK ME ON GITHUB', 'RESOLVING CONFLICTS...', 'LGTM'];
+export const BOARD_TEXTS = ['SHIP IT!', 'git commit -m "vibes"', 'PAGES FM 101.1', 'MERGE EARLY, MERGE OFTEN', 'HORIZON PAGES FESTIVAL', '404: SPEED LIMIT NOT FOUND', 'BUILD PASSING', 'FORK ME ON GITHUB', 'RESOLVING CONFLICTS...', 'LGTM'];
 export function makeSignTex(text, bg = '#0d1117', fg = '#e6edf3', accent = '#2ea043') {
   return canvasTex(512, 192, (ctx, w, h) => {
     ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);

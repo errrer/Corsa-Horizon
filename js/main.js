@@ -1,8 +1,9 @@
-// Corsa Horizons - entry point. Wires renderer, world, physics, AI, events, audio and UI together.
+// Horizon Pages - entry point. Wires renderer, world, physics, AI, events, audio and UI together.
 import * as THREE from 'three';
 import { initWorld, setSeason, world, heightAt, nearRoad, nearestRoadIndex, roadFrame, FAM } from './terrain.js';
 import { CarPhysics, deriveSpec, computePI, classOf, snapshot, restore } from './physics.js';
-import { CARS, carById, buildCar } from './cars.js';
+import { CARS, carById } from './cars.js';
+import { makeCarModel, loadHuracan } from './models.js';
 import { makeMaterials, ChunkManager } from './chunks.js';
 import { SkySystem, Weather } from './sky.js';
 import { AudioSys, STATIONS } from './audio.js';
@@ -108,6 +109,9 @@ class Game {
     this.applyQuality();
     this.applyCar(true);
     await this.setupPost();
+    this.setLoad(0.06, 'Loading the Huracán...');
+    try { await loadHuracan(); } catch (e) { console.warn('Huracan model unavailable', e); }
+    this.applyCar(true);
     this.setLoad(0.08, 'Raising the festival...');
     await frame();
     this.festival.build();
@@ -198,7 +202,8 @@ class Game {
     const spec = deriveSpec(base, own.up); spec.pi = computePI(spec); spec.cls = classOf(spec.pi);
     this.carSpec = spec; this.car.setSpec(spec);
     if (this.model) this.scene.remove(this.model.group);
-    const m = buildCar(base, own.color); this.model = m;
+    const m = makeCarModel(base, own.color); this.model = m;
+    if (this.envTex && m.mats) for (const mt of m.mats) if (mt && !mt.envMap && mt.isMeshStandardMaterial) { mt.envMap = this.envTex; mt.envMapIntensity = 0.5; }
     m.group.rotation.order = 'YXZ';
     if (this.envTex) { const b = m.body; b.envMap = this.envTex; b.envMapIntensity = 0.9; b.roughness = 0.22; b.metalness = 0.65; }
     m.group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
@@ -344,7 +349,7 @@ class Game {
   exitPhoto() { this.mode = 'play'; this.paused = false; this.hourOverride = null; this.ui.closePhoto(); this.camera.fov = this.state.settings.fov; this.camera.updateProjectionMatrix(); }
   capture() {
     this.renderFrame();
-    $('c').toBlob((b) => { if (!b) return; const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `corsa-horizons-${Date.now()}.png`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); });
+    $('c').toBlob((b) => { if (!b) return; const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `horizon-pages-${Date.now()}.png`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); });
     this.audio.blip('photo'); this.ui.toast('Photo saved', 'good');
   }
   readPad() {

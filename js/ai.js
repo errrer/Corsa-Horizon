@@ -1,6 +1,7 @@
 // AI drivers: ambient traffic on the paved roads and kinematic rivals that follow race routes.
 import * as THREE from 'three';
-import { buildCar, buildTraffic, TRAFFIC_KINDS, CARS, PAINTS } from './cars.js';
+import { makeCarModel } from './models.js';
+import { buildTraffic, TRAFFIC_KINDS, CARS, PAINTS } from './cars.js';
 import { heightAt, roadFrame, nearestRoadIndex, FAM } from './terrain.js';
 import { clamp, lerp, damp, angDiff, TAU } from './util.js';
 import { makeTag } from './tags.js';
@@ -80,7 +81,7 @@ export class Traffic {
 export class Rival {
   constructor(scene, route, grid, spec, color, skill) {
     this.scene = scene; this.route = route; this.spec = spec;
-    const m = buildCar(spec, color);
+    const m = makeCarModel(spec, color);
     m.group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     this.group = m.group; this.wheels = m.wheels; this.tail = m.tail;
     this.L = m.group.userData.L; this.W = m.group.userData.W; this.wb = spec.wb || this.L * 0.63;

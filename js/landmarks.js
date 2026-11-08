@@ -1,4 +1,4 @@
-// Permanent landmarks: the Corsa Horizons Festival plaza and the GitHub "Repo Town" district.
+// Permanent landmarks: the Horizon Pages Festival plaza and the GitHub "Repo Town" district.
 import * as THREE from 'three';
 import { world, nearRoad, heightAt, roadFrame, FAM } from './terrain.js';
 import { GeoBuilder, makeSignTex } from './chunks.js';
@@ -46,7 +46,7 @@ export class Festival {
       const g = new THREE.Group(), yaw = face(st.x, st.z);
       const base = new THREE.Mesh(new THREE.BoxGeometry(34, 2.6, 16), std(0x21262d)); base.position.y = 1.3; base.castShadow = true; g.add(base);
       const wall = new THREE.Mesh(new THREE.BoxGeometry(34, 14, 1), std(0x0d1117)); wall.position.set(0, 9.6, -7.5); g.add(wall);
-      const screenMat = new THREE.MeshStandardMaterial({ map: makeSignTex('CORSA HORIZONS FESTIVAL', '#0d1117', '#ffffff', '#58a6ff'), emissiveMap: null, emissive: 0x222233, roughness: 0.3 });
+      const screenMat = new THREE.MeshStandardMaterial({ map: makeSignTex('HORIZON PAGES FESTIVAL', '#0d1117', '#ffffff', '#58a6ff'), emissiveMap: null, emissive: 0x222233, roughness: 0.3 });
       const screen = new THREE.Mesh(new THREE.PlaneGeometry(26, 9.7), screenMat); screen.position.set(0, 9.8, -6.9); g.add(screen); this.anim.screen = screenMat;
       for (const s of [-1, 1]) {
         const sp = new THREE.Mesh(new THREE.BoxGeometry(3, 8, 3), std(0x111111)); sp.position.set(s * 18.5, 4, -3); g.add(sp);
@@ -108,7 +108,7 @@ export class Festival {
     }
     // gate arches across the main roads
     const fr = {};
-    for (const [fam, t0, name] of [[0, f.x + 55, 'CORSA HORIZONS FESTIVAL'], [1, f.z - 55, 'WELCOME - git checkout fun'], [0, f.x - 55, 'MERGE EARLY, MERGE OFTEN'], [1, f.z + 55, 'SHIP IT!']]) {
+    for (const [fam, t0, name] of [[0, f.x + 55, 'HORIZON PAGES FESTIVAL'], [1, f.z - 55, 'WELCOME - git checkout fun'], [0, f.x - 55, 'MERGE EARLY, MERGE OFTEN'], [1, f.z + 55, 'SHIP IT!']]) {
       roadFrame(fam, 0, t0, fr);
       const g = new THREE.Group(), w = FAM[fam].w + 3;
       for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(1.1, 11, 1.1), glow(0x58a6ff, 0.5)); p.position.set(s * w, 5.5, 0); g.add(p); E.circles.push([fr.x + fr.nx * s * w, fr.z + fr.nz * s * w, 0.9]); }

@@ -1,7 +1,8 @@
 // Peer-to-peer multiplayer over WebRTC using PeerJS (no game server needed; PeerJS's free broker only introduces peers).
 // Star topology: guests send their state to the host, the host relays everybody's state to everybody.
 import * as THREE from 'three';
-import { buildCar, carById } from './cars.js';
+import { carById } from './cars.js';
+import { makeCarModel } from './models.js';
 import { makeTag } from './tags.js';
 import { world } from './terrain.js';
 import { angDiff, damp } from './util.js';
@@ -76,7 +77,7 @@ export class Net {
     if (!r || r.carId !== s.c || r.color !== s.k) {
       if (r) this.g.scene.remove(r.group);
       let spec; try { spec = carById(s.c); } catch (e) { spec = carById('commit'); }
-      const m = buildCar(spec, s.k || spec.color); m.group.rotation.order = 'YXZ';
+      const m = makeCarModel(spec, s.k || spec.color); m.group.rotation.order = 'YXZ';
       m.group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
       const tag = makeTag(s.n || 'Player', '#58a6ff'); tag.position.set(0, spec.H + 1.3, 0); m.group.add(tag);
       m.group.position.set(s.x, s.y, s.z);

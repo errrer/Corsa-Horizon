@@ -1,4 +1,4 @@
-# Corsa Horizons
+# Horizon Pages
 
 An endless open-world racing festival (open-world festival style) that runs entirely in the browser.
 Plain static files: no build step, no server. Three.js loads from the jsDelivr CDN.
@@ -38,3 +38,7 @@ W/S gas and brake, A/D steer, Space handbrake, Shift nitro, H horn, G hold to re
 ## Files
 
 `js/terrain.js` world generation, `chunks.js` streaming geometry, `physics.js` car model, `cars.js` models and roster, `events.js` events and races, `ai.js` traffic and rivals, `sky.js` sky and weather, `audio.js` sound, `landmarks.js` festival and Repo Town, `ui.js` HUD and menus, `save.js` progress, `main.js` game loop.
+
+## Credits
+
+Lamborghini Huracán model: "2016 Lamborghini Huracan" by RBLXSupercars (https://sketchfab.com/3d-models/2016-lamborghini-huracan-32f8ddbfb9ef45b085b0fa614f43af0f), licensed CC BY 4.0.
