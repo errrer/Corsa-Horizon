@@ -17,7 +17,14 @@ const SC = 0.25; // model units -> metres
 let TPL = null;
 
 export async function loadHuracan(url = 'assets/huracan.glb') {
-  const gltf = await new GLTFLoader().loadAsync(url);
+  let buf = null;
+  try { const r = await fetch(url); if (!r.ok) throw new Error('missing'); buf = await r.arrayBuffer(); if (new Uint32Array(buf, 0, 1)[0] !== 0x46546c67) throw new Error('not glb'); } catch (e) {
+    // some hosts only serve text files: fall back to a base64 copy
+    const txt = await (await fetch('assets/huracan.b64.txt')).text(), bin = atob(txt), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    buf = u8.buffer;
+  }
+  const gltf = await new Promise((res, rej) => new GLTFLoader().parse(buf, '', res, rej));
   const scene = gltf.scene; scene.updateMatrixWorld(true);
   const parts = [], mats = {};
   scene.traverse((o) => {
