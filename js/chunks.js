@@ -140,18 +140,31 @@ export function makeSignTex(text, bg = '#0d1117', fg = '#e6edf3', accent = '#2ea
 
 export function makeMaterials() {
   const grain = canvasTex(256, 256, (c, w, h) => noiseFill(c, w, h, '#d8d8d8', 0.35, 5000));
-  const road = canvasTex(128, 256, (c, w, h) => {
-    noiseFill(c, w, h, '#6d7078', 0.22, 4500);
-    c.fillStyle = '#e8e8e8'; c.fillRect(5, 0, 4, h); c.fillRect(w - 9, 0, 4, h);
-    c.fillStyle = '#e3b72b'; c.fillRect(w / 2 - 5, 0, 3, h); c.fillRect(w / 2 + 2, 0, 3, h);
+  const loadImg = (n, cb) => { const im = new Image(); im.onload = () => cb(im); im.src = 'assets/tex/' + n; };
+  const photoTex = (n) => { const t = new THREE.TextureLoader().load('assets/tex/' + n); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
+  const drawRoad = (c, w, h, img) => {
+    if (img) { c.globalCompositeOperation = 'source-over'; c.fillStyle = '#000'; c.fillRect(0, 0, w, h); c.globalCompositeOperation = 'lighter'; for (let i = 0; i < 3; i++) c.drawImage(img, 0, 0, w, h); c.globalCompositeOperation = 'source-over'; }
+    else noiseFill(c, w, h, '#6d7078', 0.22, 4500);
+    const k = w / 128;
+    c.fillStyle = '#e8e8e8'; c.fillRect(5 * k, 0, 4 * k, h); c.fillRect(w - 9 * k, 0, 4 * k, h);
+    c.fillStyle = '#e3b72b'; c.fillRect(w / 2 - 5 * k, 0, 3 * k, h); c.fillRect(w / 2 + 2 * k, 0, 3 * k, h);
     c.fillStyle = '#d8d8d8';
-    for (let y = 0; y < h; y += 128) { c.fillRect(w * 0.25 - 1.5, y, 3, 64); c.fillRect(w * 0.75 - 1.5, y, 3, 64); }
+    for (let y = 0; y < h; y += h / 2) { c.fillRect(w * 0.25 - 1.5 * k, y, 3 * k, h / 4); c.fillRect(w * 0.75 - 1.5 * k, y, 3 * k, h / 4); }
+  };
+  const road = canvasTex(256, 512, (c, w, h) => drawRoad(c, w, h, null));
+  const plain = canvasTex(256, 256, (c, w, h) => noiseFill(c, w, h, '#6d7078', 0.22, 2500));
+  const drawDirt = (c, w, h, img) => {
+    if (img) { c.fillStyle = '#000'; c.fillRect(0, 0, w, h); c.globalCompositeOperation = 'lighter'; for (let i = 0; i < 2; i++) c.drawImage(img, 0, 0, w, h); c.globalCompositeOperation = 'source-over'; }
+    else noiseFill(c, w, h, '#7a5b3a', 0.35, 4000);
+    c.fillStyle = 'rgba(40,26,14,0.35)'; c.fillRect(w * 0.26, 0, w * 0.12, h); c.fillRect(w * 0.62, 0, w * 0.12, h);
+  };
+  const dirt = canvasTex(256, 256, (c, w, h) => drawDirt(c, w, h, null));
+  loadImg('asphalt.jpg', (im) => {
+    drawRoad(road.image.getContext('2d'), 256, 512, im); road.needsUpdate = true;
+    const pc = plain.image.getContext('2d'); pc.fillStyle = '#000'; pc.fillRect(0, 0, 256, 256); pc.globalCompositeOperation = 'lighter'; for (let i = 0; i < 3; i++) pc.drawImage(im, 0, 0, 256, 256); pc.globalCompositeOperation = 'source-over'; plain.needsUpdate = true;
   });
-  const plain = canvasTex(128, 128, (c, w, h) => noiseFill(c, w, h, '#6d7078', 0.22, 2500));
-  const dirt = canvasTex(128, 128, (c, w, h) => {
-    noiseFill(c, w, h, '#7a5b3a', 0.35, 4000);
-    c.fillStyle = 'rgba(60,40,22,0.35)'; c.fillRect(w * 0.26, 0, w * 0.12, h); c.fillRect(w * 0.62, 0, w * 0.12, h);
-  });
+  loadImg('dirt.jpg', (im) => { drawDirt(dirt.image.getContext('2d'), 256, 256, im); dirt.needsUpdate = true; });
+  const tGrass = photoTex('grass.jpg'), tDirt = photoTex('dirt.jpg'), tSand = photoTex('sand.jpg'), tAsph = photoTex('asphalt.jpg');
   const wall = canvasTex(256, 256, (c, w, h) => {
     c.fillStyle = '#cfd4da'; c.fillRect(0, 0, w, h);
     for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) { c.fillStyle = '#34465c'; c.fillRect(i * 64 + 14, j * 64 + 12, 36, 38); }
@@ -162,7 +175,27 @@ export function makeMaterials() {
     for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) if (rnd() < 0.62) { c.fillStyle = rnd() < 0.7 ? '#ffd58a' : '#bfe3ff'; c.fillRect(i * 64 + 14, j * 64 + 12, 36, 38); }
   });
   const mats = {
-    terrain: new THREE.MeshStandardMaterial({ vertexColors: true, map: grain, roughness: 0.96, metalness: 0, side: THREE.DoubleSide }),
+    terrain: (() => {
+      const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: grain, roughness: 0.96, metalness: 0, side: THREE.DoubleSide });
+      m.onBeforeCompile = (sh) => {
+        sh.uniforms.tGrass = { value: tGrass }; sh.uniforms.tDirt = { value: tDirt }; sh.uniforms.tSand = { value: tSand }; sh.uniforms.tAsph = { value: tAsph };
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec4 splat; varying vec4 vSplat;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvSplat = splat;');
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec4 vSplat; uniform sampler2D tGrass; uniform sampler2D tDirt; uniform sampler2D tSand; uniform sampler2D tAsph;')
+          .replace('#include <map_fragment>', `#include <map_fragment>
+          vec2 sp = vMapUv;
+          vec3 g1 = texture2D(tGrass, sp * 0.55).rgb * 0.6 + texture2D(tGrass, sp * 0.13 + 0.37).rgb * 0.4;
+          vec3 d1 = texture2D(tDirt, sp * 0.5).rgb * 0.6 + texture2D(tDirt, sp * 0.11 + 0.21).rgb * 0.4;
+          vec3 s1 = texture2D(tSand, sp * 0.4).rgb * 0.6 + texture2D(tSand, sp * 0.09 + 0.55).rgb * 0.4;
+          vec3 a1 = texture2D(tAsph, sp * 0.6).rgb;
+          vec3 dG = mix(vec3(1.0), clamp(g1 / vec3(0.195, 0.209, 0.076), 0.35, 2.4), 0.85);
+          vec3 dD = mix(vec3(1.0), clamp(d1 / vec3(0.065, 0.045, 0.035), 0.35, 2.4), 0.85);
+          vec3 dS = mix(vec3(1.0), clamp(s1 / vec3(0.684, 0.523, 0.279), 0.5, 1.8), 0.8);
+          vec3 dA = mix(vec3(1.0), clamp(a1 / vec3(0.0196, 0.0186, 0.0165), 0.35, 2.4), 0.8);
+          float ws = clamp(1.0 - vSplat.x - vSplat.y - vSplat.z - vSplat.w, 0.0, 1.0);
+          diffuseColor.rgb *= dG * vSplat.x + dD * vSplat.y + dS * vSplat.z + dA * vSplat.w + vec3(ws);`);
+      };
+      return m;
+    })(),
     road: new THREE.MeshStandardMaterial({ map: road, roughness: 0.88, metalness: 0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
     plain: new THREE.MeshStandardMaterial({ map: plain, roughness: 0.88, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }),
     dirt: new THREE.MeshStandardMaterial({ map: dirt, roughness: 1, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
@@ -266,7 +299,7 @@ export class ChunkManager {
     for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) H[j * W + i] = heightNoRamp(ox + (i - 1) * step, oz + (j - 1) * step);
     const skirt = 4 * segs * 2 + 8;
     const total = n * n + skirt;
-    const pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), col = new Float32Array(total * 3), uv = new Float32Array(total * 2);
+    const pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), col = new Float32Array(total * 3), uv = new Float32Array(total * 2), spl = new Float32Array(total * 4);
     const tmp = [0, 0, 0], tmp2 = [0, 0, 0], tmp3 = [0, 0, 0], season = world.season;
     const grassC = GRASS[season] || GRASS.summer;
     const nr = { edge: 0, fam: 0 };
@@ -283,9 +316,10 @@ export class ChunkManager {
       nearRoad(x, z, nr);
       let c;
       const dn = detailNoise(x, z), pn = patchNoise(x, z);
-      if (nr.edge < 0.9) c = FAM[nr.fam].dirt ? C.dirt : C.asphalt;
-      else if (nr.edge < 3.2 && !FAM[nr.fam].dirt) c = mix3(C.asphalt, C.gravel, smoothstep(0.9, 2.2, nr.edge), tmp);
-      else if (hh < -0.35) c = mix3(C.seabed, C.deep, clamp(-hh / 10, 0, 1), tmp);
+      let sg = 0, sd = 0, ss = 0, sa = 0;
+      if (nr.edge < 0.9) { c = FAM[nr.fam].dirt ? C.dirt : C.asphalt; if (FAM[nr.fam].dirt) sd = 1; else sa = 1; }
+      else if (nr.edge < 3.2 && !FAM[nr.fam].dirt) { const q = smoothstep(0.9, 2.2, nr.edge); c = mix3(C.asphalt, C.gravel, q, tmp); sa = 1 - q; sd = q; }
+      else if (hh < -0.35) { c = mix3(C.seabed, C.deep, clamp(-hh / 10, 0, 1), tmp); ss = 1; }
       else {
         const dry = dryness(x, z);
         const forest = forestDensity(x, z);
@@ -295,7 +329,11 @@ export class ChunkManager {
         c = mix3(c, C.sand, 1 - smoothstep(1.0, 3.2, hh), tmp3);
         c = mix3(c, C.rock, Math.max(smoothstep(66, 92, hh), smoothstep(0.82, 0.66, il)), tmp2);
         c = mix3(c, C.snow, smoothstep(98, 122, hh) * (il > 0.7 ? 1 : 0.4), tmp3);
+        ss = Math.max(smoothstep(0.3, 0.5, dry), 1 - smoothstep(1.0, 3.2, hh));
+        const rk = Math.max(smoothstep(66, 92, hh), smoothstep(0.82, 0.66, il));
+        sg = (1 - ss) * (1 - rk) * (season === 'winter' ? 0.2 : 1);
       }
+      spl[k * 4] = sg; spl[k * 4 + 1] = sd; spl[k * 4 + 2] = ss * (hh < -0.35 ? 1 : 0.85); spl[k * 4 + 3] = sa;
       const br = 0.94 + dn * 0.06;
       const pc = punch(c); col[k * 3] = toLin(pc[0] * br); col[k * 3 + 1] = toLin(pc[1] * br); col[k * 3 + 2] = toLin(pc[2] * br);
     }
@@ -307,6 +345,7 @@ export class ChunkManager {
         nor[s * 3] = nor[idx * 3]; nor[s * 3 + 1] = nor[idx * 3 + 1]; nor[s * 3 + 2] = nor[idx * 3 + 2];
         col[s * 3] = col[idx * 3]; col[s * 3 + 1] = col[idx * 3 + 1]; col[s * 3 + 2] = col[idx * 3 + 2];
         uv[s * 2] = uv[idx * 2]; uv[s * 2 + 1] = uv[idx * 2 + 1];
+        for (let q = 0; q < 4; q++) spl[s * 4 + q] = spl[idx * 4 + q];
         s++;
       }
     };
@@ -327,6 +366,7 @@ export class ChunkManager {
     g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
     g.setAttribute('color', new THREE.BufferAttribute(col, 3));
     g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    g.setAttribute('splat', new THREE.BufferAttribute(spl, 4));
     g.setIndex(new THREE.BufferAttribute(new Uint32Array(idx), 1));
     g.computeBoundingSphere();
     const m = new THREE.Mesh(g, this.mats.terrain);

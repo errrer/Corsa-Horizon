@@ -93,29 +93,20 @@ export class SkySystem {
     scene.add(this.sun); scene.add(this.sun.target);
 
     // clouds
-    const cv = document.createElement('canvas'); cv.width = cv.height = 128;
-    const cx = cv.getContext('2d');
-    for (let i = 0; i < 14; i++) {
-      const x = 30 + Math.random() * 68, y = 44 + Math.random() * 40, r = 18 + Math.random() * 26;
-      const g = cx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, 'rgba(255,255,255,0.5)'); g.addColorStop(1, 'rgba(255,255,255,0)');
-      cx.fillStyle = g; cx.fillRect(0, 0, 128, 128);
-    }
-    const ctex = new THREE.CanvasTexture(cv); ctex.colorSpace = THREE.SRGBColorSpace;
+    const ldr = new THREE.TextureLoader();
+    this.cloudMats = [1, 2, 3, 4].map((n) => { const t = ldr.load('assets/tex/cloud' + n + '.png'); t.colorSpace = THREE.SRGBColorSpace; return new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, opacity: 0.8, fog: false }); });
+    this.cloudAsp = [207 / 320, 1, 245 / 512, 1];
     this.clouds = [];
-    this.cloudMat = new THREE.SpriteMaterial({ map: ctex, transparent: true, depthWrite: false, opacity: 0.8, fog: false });
     for (let i = 0; i < 32; i++) {
-      const s = new THREE.Sprite(this.cloudMat);
+      const ci = i % 4, s = new THREE.Sprite(this.cloudMats[ci]);
       const a = Math.random() * 6.283, d = 400 + Math.random() * 2000;
       s.userData = { a, d, alt: 330 + Math.random() * 300, size: 500 + Math.random() * 800, k: i / 32 };
-      s.scale.set(s.userData.size, s.userData.size * 0.45, 1); s.renderOrder = -5;
+      s.scale.set(s.userData.size, s.userData.size * this.cloudAsp[ci] * (ci === 1 || ci === 3 ? 0.62 : 1), 1); s.renderOrder = -5;
       scene.add(s); this.clouds.push(s);
     }
 
     // water
-    const wc = document.createElement('canvas'); wc.width = wc.height = 128;
-    const wx = wc.getContext('2d'); wx.fillStyle = '#9ec4d8'; wx.fillRect(0, 0, 128, 128);
-    for (let i = 0; i < 500; i++) { wx.fillStyle = `rgba(255,255,255,${Math.random() * 0.25})`; wx.fillRect(Math.random() * 128, Math.random() * 128, 2 + Math.random() * 5, 1); }
-    this.waterTex = new THREE.CanvasTexture(wc); this.waterTex.wrapS = this.waterTex.wrapT = THREE.RepeatWrapping; this.waterTex.repeat.set(220, 220); this.waterTex.colorSpace = THREE.SRGBColorSpace;
+    this.waterTex = new THREE.TextureLoader().load('assets/tex/water.jpg'); this.waterTex.wrapS = this.waterTex.wrapT = THREE.RepeatWrapping; this.waterTex.repeat.set(160, 160); this.waterTex.colorSpace = THREE.SRGBColorSpace;
     this.water = new THREE.Mesh(
       new THREE.PlaneGeometry(9000, 9000).rotateX(-Math.PI / 2),
       new THREE.MeshStandardMaterial({ color: 0x2c7fa8, map: this.waterTex, transparent: true, opacity: 0.82, roughness: 0.12, metalness: 0.15 }),
@@ -200,8 +191,7 @@ export class SkySystem {
     this.dome.position.copy(cp);
     const cc = mixc([0.25, 0.27, 0.34], [1, 1, 1], dayF);
     const cs = mixc(cc, [1, 0.65, 0.5], sunset * 0.6);
-    this.cloudMat.color.setRGB(cs[0], cs[1], cs[2], THREE.SRGBColorSpace);
-    this.cloudMat.opacity = clamp(0.25 + cloud * 0.7, 0, 0.95);
+    for (const cm of this.cloudMats) { cm.color.setRGB(cs[0], cs[1], cs[2], THREE.SRGBColorSpace); cm.opacity = clamp(0.35 + cloud * 0.6, 0, 0.97); }
     const wind = 6 + cloud * 14;
     for (const s of this.clouds) {
       const u = s.userData;
