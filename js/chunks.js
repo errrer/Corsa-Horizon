@@ -6,6 +6,7 @@ import {
   dryness, detailNoise, patchNoise, townAt, getRamp,
 } from './terrain.js';
 import { clamp, lerp, smoothstep, hash2, mulberry32 } from './util.js';
+import { BUILD } from './buildings.js';
 
 // ---------- colour helpers (palettes are authored in sRGB, vertex colours are linear) ----------
 const toLin = (c) => Math.pow(clamp(c, 0, 1), 2.2);
@@ -142,8 +143,9 @@ export function makeMaterials() {
   const grain = canvasTex(256, 256, (c, w, h) => noiseFill(c, w, h, '#d8d8d8', 0.35, 5000));
   const loadImg = (n, cb) => { const im = new Image(); im.onload = () => cb(im); im.src = 'assets/tex/' + n; };
   const photoTex = (n) => { const t = new THREE.TextureLoader().load('assets/tex/' + n); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
+  const tileImg = (c, img, w, h, n) => { const tw = w / n, th = h / n; for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) c.drawImage(img, i * tw, j * th, tw, th); };
   const drawRoad = (c, w, h, img) => {
-    if (img) { c.globalCompositeOperation = 'source-over'; c.fillStyle = '#000'; c.fillRect(0, 0, w, h); c.globalCompositeOperation = 'lighter'; for (let i = 0; i < 3; i++) c.drawImage(img, 0, 0, w, h); c.globalCompositeOperation = 'source-over'; }
+    if (img) { c.globalCompositeOperation = 'source-over'; c.fillStyle = '#000'; c.fillRect(0, 0, w, h); c.globalCompositeOperation = 'lighter'; for (let i = 0; i < 3; i++) tileImg(c, img, w, h, 6); c.globalCompositeOperation = 'source-over'; }
     else noiseFill(c, w, h, '#6d7078', 0.22, 4500);
     const k = w / 128;
     c.fillStyle = '#e8e8e8'; c.fillRect(5 * k, 0, 4 * k, h); c.fillRect(w - 9 * k, 0, 4 * k, h);
@@ -151,19 +153,19 @@ export function makeMaterials() {
     c.fillStyle = '#d8d8d8';
     for (let y = 0; y < h; y += h / 2) { c.fillRect(w * 0.25 - 1.5 * k, y, 3 * k, h / 4); c.fillRect(w * 0.75 - 1.5 * k, y, 3 * k, h / 4); }
   };
-  const road = canvasTex(256, 512, (c, w, h) => drawRoad(c, w, h, null));
-  const plain = canvasTex(256, 256, (c, w, h) => noiseFill(c, w, h, '#6d7078', 0.22, 2500));
+  const road = canvasTex(1024, 1024, (c, w, h) => drawRoad(c, w, h, null));
+  const plain = canvasTex(1024, 1024, (c, w, h) => noiseFill(c, w, h, '#6d7078', 0.22, 2500));
   const drawDirt = (c, w, h, img) => {
-    if (img) { c.fillStyle = '#000'; c.fillRect(0, 0, w, h); c.globalCompositeOperation = 'lighter'; for (let i = 0; i < 2; i++) c.drawImage(img, 0, 0, w, h); c.globalCompositeOperation = 'source-over'; }
+    if (img) { c.fillStyle = '#000'; c.fillRect(0, 0, w, h); c.globalCompositeOperation = 'lighter'; for (let i = 0; i < 2; i++) tileImg(c, img, w, h, 3); c.globalCompositeOperation = 'source-over'; }
     else noiseFill(c, w, h, '#7a5b3a', 0.35, 4000);
     c.fillStyle = 'rgba(40,26,14,0.35)'; c.fillRect(w * 0.26, 0, w * 0.12, h); c.fillRect(w * 0.62, 0, w * 0.12, h);
   };
-  const dirt = canvasTex(256, 256, (c, w, h) => drawDirt(c, w, h, null));
+  const dirt = canvasTex(1024, 1024, (c, w, h) => drawDirt(c, w, h, null));
   loadImg('asphalt.jpg', (im) => {
-    drawRoad(road.image.getContext('2d'), 256, 512, im); road.needsUpdate = true;
-    const pc = plain.image.getContext('2d'); pc.fillStyle = '#000'; pc.fillRect(0, 0, 256, 256); pc.globalCompositeOperation = 'lighter'; for (let i = 0; i < 3; i++) pc.drawImage(im, 0, 0, 256, 256); pc.globalCompositeOperation = 'source-over'; plain.needsUpdate = true;
+    drawRoad(road.image.getContext('2d'), 1024, 1024, im); road.needsUpdate = true;
+    const pc = plain.image.getContext('2d'); pc.fillStyle = '#000'; pc.fillRect(0, 0, 1024, 1024); pc.globalCompositeOperation = 'lighter'; for (let i = 0; i < 3; i++) tileImg(pc, im, 1024, 1024, 5); pc.globalCompositeOperation = 'source-over'; plain.needsUpdate = true;
   });
-  loadImg('dirt.jpg', (im) => { drawDirt(dirt.image.getContext('2d'), 256, 256, im); dirt.needsUpdate = true; });
+  loadImg('dirt.jpg', (im) => { drawDirt(dirt.image.getContext('2d'), 1024, 1024, im); dirt.needsUpdate = true; });
   const tGrass = photoTex('grass.jpg'), tDirt = photoTex('dirt.jpg'), tSand = photoTex('sand.jpg'), tAsph = photoTex('asphalt.jpg');
   const wall = canvasTex(256, 256, (c, w, h) => {
     c.fillStyle = '#cfd4da'; c.fillRect(0, 0, w, h);
@@ -192,7 +194,9 @@ export function makeMaterials() {
           vec3 dS = mix(vec3(1.0), clamp(s1 / vec3(0.684, 0.523, 0.279), 0.5, 1.8), 0.8);
           vec3 dA = mix(vec3(1.0), clamp(a1 / vec3(0.0196, 0.0186, 0.0165), 0.35, 2.4), 0.8);
           float ws = clamp(1.0 - vSplat.x - vSplat.y - vSplat.z - vSplat.w, 0.0, 1.0);
-          diffuseColor.rgb *= dG * vSplat.x + dD * vSplat.y + dS * vSplat.z + dA * vSplat.w + vec3(ws);`);
+          vec3 others = (dG * vSplat.x + dD * vSplat.y + dA * vSplat.w + vec3(ws)) / max(1.0 - vSplat.z, 0.001);
+          vec3 sandCol = s1 * 0.85 * (0.85 + 0.3 * texture2D(map, sp).r);
+          diffuseColor.rgb = mix(diffuseColor.rgb * others, sandCol, vSplat.z);`);
       };
       return m;
     })(),
@@ -333,7 +337,7 @@ export class ChunkManager {
         const rk = Math.max(smoothstep(66, 92, hh), smoothstep(0.82, 0.66, il));
         sg = (1 - ss) * (1 - rk) * (season === 'winter' ? 0.2 : 1);
       }
-      spl[k * 4] = sg; spl[k * 4 + 1] = sd; spl[k * 4 + 2] = ss * (hh < -0.35 ? 1 : 0.85); spl[k * 4 + 3] = sa;
+      spl[k * 4] = sg; spl[k * 4 + 1] = sd; spl[k * 4 + 2] = hh < -0.35 ? 0 : ss; spl[k * 4 + 3] = sa;
       const br = 0.94 + dn * 0.06;
       const pc = punch(c); col[k * 3] = toLin(pc[0] * br); col[k * 3 + 1] = toLin(pc[1] * br); col[k * 3 + 2] = toLin(pc[2] * br);
     }
@@ -570,7 +574,11 @@ export class ChunkManager {
         if (dd < 1.2 || dd > 6.4 || r0 < 0.1) continue;
         const bx = town.x + gx * 34 + (r1 - 0.5) * 8, bz = town.z + gz * 34 + (r2 - 0.5) * 12;
         if (bx < ox || bx >= ox + CH || bz < oz || bz >= oz + CH) continue;
-        const w = 12 + r3 * 12, d = 12 + r4 * 12, hgt = (7 + r0 * 16 + Math.max(0, 6 - dd) * (6 + r1 * 12)) * (0.7 + r2 * 0.6);
+        const pick = BUILD.ready && dd <= 3.9 && r0 < 0.62 ? BUILD.list[Math.floor(r3 * 3.999) % BUILD.list.length] : null;
+        const psc = 0.85 + r2 * 0.3, phs = 0.85 + r1 * 0.55;
+        let w = 12 + r3 * 12, d = 12 + r4 * 12; const hgt0 = (7 + r0 * 16 + Math.max(0, 6 - dd) * (6 + r1 * 12)) * (0.7 + r2 * 0.6);
+        let hgt = hgt0;
+        if (pick) { w = d = Math.max(pick.w, pick.d) * psc; }
         const edge = Math.min(nearRoad(bx - w * 0.6, bz - d * 0.6).edge, nearRoad(bx + w * 0.6, bz + d * 0.6).edge, nearRoad(bx - w * 0.6, bz + d * 0.6).edge, nearRoad(bx + w * 0.6, bz - d * 0.6).edge, nearRoad(bx, bz).edge);
         if (edge < 7) continue;
         let lo = 1e9, hi = -1e9;
@@ -578,6 +586,17 @@ export class ChunkManager {
           const hh = heightNoRamp(bx + sx * w / 2, bz + sz * d / 2); lo = Math.min(lo, hh); hi = Math.max(hi, hh);
         }
         if (hi - lo > 4.5 || lo < 1.5) continue;
+        if (pick) {
+          bg.box(bx - ox, lo - 3, bz - oz, w * 0.94, hi - lo + 3.4, d * 0.94, 0, [toLin(0.45), toLin(0.45), toLin(0.47)], 1);
+          const rot = Math.floor(r4 * 3.999) * Math.PI / 2;
+          for (const pt of pick.parts) {
+            const mm = new THREE.Mesh(pt.geo, pt.mat); mm.userData.shared = true;
+            mm.position.set(bx - ox, hi + 0.2, bz - oz); mm.rotation.y = rot; mm.scale.set(pick.scale * psc, pick.scale * psc * phs, pick.scale * psc);
+            ch.group.add(mm);
+          }
+          ch.boxes.push([bx - w / 2, bz - d / 2, bx + w / 2, bz + d / 2]);
+          continue;
+        }
         const tint = [[0.96, 0.96, 0.98], [1, 0.94, 0.86], [0.88, 0.92, 1], [0.95, 1, 0.92], [1, 0.9, 0.9]][Math.floor(r1 * 4.99)];
         const lc = tint.map((q) => toLin(q * (0.8 + r2 * 0.2)));
         bg.box(bx - ox, lo - 3, bz - oz, w, hgt + (hi - lo) + 3, d, 0, lc, 1);

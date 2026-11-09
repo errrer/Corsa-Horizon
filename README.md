@@ -43,3 +43,5 @@ W/S gas and brake, A/D steer, Space handbrake, Shift nitro, H horn, G hold to re
 
 Lamborghini Huracán model: "2016 Lamborghini Huracan" by RBLXSupercars (https://sketchfab.com/3d-models/2016-lamborghini-huracan-32f8ddbfb9ef45b085b0fa614f43af0f), licensed CC BY 4.0.
 Porsche 911 GT3 model: "2022 Porsche 911 GT3 (992)" by Ddiaz Design (https://sketchfab.com/3d-models/2022-porsche-911-gt3-992-ba01afbaf32846e598db315be3507db3), licensed CC BY 4.0.
+
+Downtown tower models (building_01/02/05/06) were supplied by the project owner and decimated for the web (assets/buildings).
