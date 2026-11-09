@@ -45,11 +45,11 @@ export function initWorld(seed = 1, season = 'summer') {
 export const setSeason = (s) => { world.season = s; };
 
 function smax(a, b) { return 0.5 * (a + b + Math.sqrt((a - b) * (a - b) + 4)); }
-function mask(x, z) { return smoothstep(-0.22, 0.3, nMtn.fbm(x * 0.0004 + 50, z * 0.0004 - 20, 2)); }
+function mask(x, z) { return smoothstep(0.06, 0.62, nMtn.fbm(x * 0.0004 + 50, z * 0.0004 - 20, 2)); }
 function lowH(x, z, mk) {
   const c = nCont.fbm(x * 0.00028, z * 0.00028, 3);
   const ridge = 1 - Math.abs(nMtn.n2(x * 0.0011, z * 0.0011));
-  return c * 38 + 14 + mk * ridge * 40;
+  return c * 38 + 14 + mk * ridge * 16;
 }
 
 // ---------- roads ----------
@@ -151,7 +151,7 @@ export function heightNoRamp(x, z) {
     r /= tot;
   }
   const detail = nDet.fbm(x * 0.004, z * 0.004, 3) * 6 + nDet.n2(x * 0.03, z * 0.03) * 0.9;
-  const hf = hl + mk * (r * 230 - 50) + detail;
+  const hf = hl + mk * (r * 120 - 25) + detail;
   const hr = smax(hl, 3);
   const band = 12 + 1.1 * Math.abs(hf - hr);
   let t = 0;
@@ -193,7 +193,7 @@ export function surfaceAt(x, z, h) {
   if (h > 108) return SURF.SNOW;
   if (h > 82) return SURF.ROCK;
   if (world.season === 'winter') return SURF.SNOW;
-  if (dryness(x, z) > 0.22) return SURF.SAND;
+  if (dryness(x, z) > 0.42) return SURF.SAND;
   return SURF.GRASS;
 }
 
@@ -202,10 +202,10 @@ export function townAt(rx, rz) {
   const key = rx + ',' + rz;
   if (townCache.has(key)) return townCache.get(key);
   let t = null;
-  if (!(rx === 0 && rz === 0) && hash2(rx, rz, world.seed + 5) < 0.85) {
+  if (!(rx === 0 && rz === 0) && hash2(rx, rz, world.seed + 5) < 0.97) {
     const c = intersection(0, rz, 1, rx, {});
     const h = heightNoRamp(c.x, c.z);
-    if (h > 3) t = { rx, rz, x: c.x, z: c.z, seed: Math.floor(hash2(rx, rz, world.seed + 6) * 1e6) };
+    if (h > 1.5) t = { rx, rz, x: c.x, z: c.z, seed: Math.floor(hash2(rx, rz, world.seed + 6) * 1e6) };
   }
   townCache.set(key, t);
   return t;

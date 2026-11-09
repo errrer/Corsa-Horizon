@@ -41,9 +41,9 @@ export class CarPhysics {
     this.b = this.L * spec.wf; // CG -> rear axle
     this.Iz = m * this.a * this.b * 1.25;
     this.P = spec.kw * 1000;
-    this.vtop = spec.top / 3.6;
+    this.vtop = spec.top / 3.6 / 1.03;
     const Froll = 0.015 * m * G;
-    this.CdA = Math.max(0.12, ((this.P * 0.9 * 0.88) / this.vtop - Froll) * 2 / (RHO * this.vtop * this.vtop));
+    this.CdA = Math.max(0.12, ((this.P * 0.9 * 0.66) / this.vtop - Froll) * 2 / (RHO * this.vtop * this.vtop));
     this.gearMax = [0.17, 0.31, 0.46, 0.62, 0.80, 1.0].map((f) => f * this.vtop * 1.03);
     this.redline = spec.redline || 7400;
     this.idle = 950;
@@ -140,8 +140,8 @@ export class CarPhysics {
     // ---- longitudinal demands ----
     let Fdrive = 0;
     if (this.reverse) Fdrive = -Math.min((thr * this.P * 0.35) / Math.max(vAbs, 2.5), 0.45 * m * G) * (vAbs < 9 ? 1 : 0);
-    else if (this.shiftT <= 0.0) Fdrive = (thr * this.P * 0.88 * this.powerCurve(this.rpmFrac) * boost) / Math.max(vAbs, 3);
-    if (this.nitroOn) Fdrive += 0.22 * m * G * (s.nitroPower || 0.4) * (1 - smoothstep(30, 90, vAbs));
+    else if (this.shiftT <= 0.0) Fdrive = (thr * this.P * 0.66 * this.powerCurve(this.rpmFrac) * boost) / Math.max(vAbs, 3);
+    if (this.nitroOn) Fdrive += 0.12 * m * G * (s.nitroPower || 0.4) * (1 - smoothstep(30, 90, vAbs));
     const brakeMax = (s.brake || 1.2) * m * G * 1.1;
     let Fbrk = brk * brakeMax * (u > 0.3 ? 1 : u < -0.3 ? -1 : 0);
     const shareF = s.drive === 'FWD' ? 1 : s.drive === 'AWD' ? 0.42 : 0;
@@ -151,7 +151,7 @@ export class CarPhysics {
     if (hand) FxR -= sgnu * Math.min(0.6 * m * G, Math.abs(u) * 4000) * (vAbs > 0.3 ? 1 : 0);
 
     // friction circle
-    const capF = mu * FzF * (s.gripF || 1), capR = mu * FzR * (s.gripR || 1) * (hand ? 0.5 : 1);
+    const capF = mu * 0.8 * FzF * (s.gripF || 1), capR = mu * 0.8 * FzR * (s.gripR || 1) * (hand ? 0.5 : 1);
     let ratioF = capF > 1 ? Math.abs(FxF) / capF : 0, ratioR = capR > 1 ? Math.abs(FxR) / capR : 0;
     const absOn = inp.abs !== false, tcsOn = inp.tcs !== false;
     this.tcsOn = false;
@@ -170,16 +170,16 @@ export class CarPhysics {
       if (isF) { FxF = Fx; ratioF = ratio; } else { FxR = Fx; ratioR = ratio; }
     }
     this.spinF = Math.max(0, ratioF - 0.97); this.spinR = Math.max(0, ratioR - 0.97);
-    const lfF = Math.sqrt(Math.max(0.12, 1 - 0.8 * Math.min(ratioF, 1) ** 2));
-    const lfR = Math.sqrt(Math.max(0.12, 1 - 0.8 * Math.min(ratioR, 1) ** 2));
+    const lfF = Math.sqrt(Math.max(0.12, 1 - 0.5 * Math.min(ratioF, 1) ** 2));
+    const lfR = Math.sqrt(Math.max(0.12, 1 - 0.5 * Math.min(ratioR, 1) ** 2));
 
     // ---- lateral tyre forces ----
     const den = Math.max(vAbs, 2.5);
     const afSlip = Math.atan2(v + a * r, den) - dl * sgnu;
     const arSlip = Math.atan2(v - b * r, den);
-    const B = s.stiff || 9.5, C = 1.35, lowSpd = clamp(vAbs / 3, 0, 1);
+    const B = (s.stiff || 9.5) * 1.45, C = 1.35, lowSpd = clamp(vAbs / 3, 0, 1);
     const handMu = hand ? 0.34 : 1;
-    const DF = mu * FzF * lfF * (s.gripF || 1) * lowSpd, DR = mu * FzR * lfR * (s.gripR || 1) * lowSpd * handMu;
+    const DF = mu * 1.08 * FzF * lfF * (s.gripF || 1) * lowSpd, DR = mu * 1.12 * FzR * lfR * Math.max(s.gripR || 1, 0.99) * lowSpd * handMu;
     const FyF = -DF * Math.sin(C * Math.atan(B * afSlip));
     const FyR = -DR * Math.sin(C * Math.atan(B * arSlip));
     this.slipF = afSlip; this.slipR = arSlip;
@@ -201,7 +201,7 @@ export class CarPhysics {
     // ---- integrate body frame ----
     const Fxt = FxFb + FxR + Fres + FslopeX;
     const Fyt = FyFb + FyR + FslopeY;
-    const Mz = a * FyFb - b * FyR - 0.28 * this.Iz * r * clamp(vAbs / 20, 0, 1) * (s.stab || 1);
+    const Mz = a * FyFb - b * FyR - (hand ? 0.2 : 0.6) * this.Iz * r * clamp(vAbs / 14, 0, 1) * (s.stab || 1);
     this.ax = Fxt / m;
     let nu = u + (Fxt / m + v * r) * dt;
     let nv = v + (Fyt / m - u * r) * dt;

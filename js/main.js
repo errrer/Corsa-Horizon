@@ -167,7 +167,7 @@ class Game {
       const q = this.state.settings.quality, rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: q === 'ultra' || q === 'high' ? 4 : 2 });
       const comp = new EffectComposer(this.renderer, rt);
       comp.addPass(new RenderPass(this.scene, this.camera));
-      this.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.28, 0.6, 1.4);
+      this.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.2, 0.5, 2.6);
       comp.addPass(this.bloom); comp.addPass(new OutputPass());
       this.composer = comp; this.resize();
     } catch (e) { console.warn('Post-processing unavailable', e); this.composer = null; }
@@ -232,9 +232,9 @@ class Game {
     this.carSpec = spec; this.car.setSpec(spec);
     if (this.model) this.scene.remove(this.model.group);
     const m = makeCarModel(base, own.color); this.model = m;
-    if (this.envTex && m.mats) for (const mt of m.mats) if (mt && !mt.envMap && mt.isMeshStandardMaterial) { mt.envMap = this.envTex; mt.envMapIntensity = 0.5; }
+    if (this.envTex && m.mats) for (const mt of m.mats) if (mt && !mt.envMap && mt.isMeshStandardMaterial) { mt.envMap = this.envTex; mt.envMapIntensity = 0.4; }
     m.group.rotation.order = 'YXZ';
-    if (this.envTex) { const b = m.body; b.envMap = this.envTex; b.envMapIntensity = 0.9; b.roughness = 0.22; b.metalness = 0.65; }
+    if (this.envTex) { const b = m.body; b.envMap = this.envTex; b.envMapIntensity = 0.5; b.roughness = 0.3; b.metalness = 0.5; if (b.emissive) b.emissive.setScalar(0); if (b.color) { const mx = Math.max(b.color.r, b.color.g, b.color.b); if (mx > 0.72) b.color.multiplyScalar(0.72 / mx); } }
     m.group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     this.headlight = new THREE.SpotLight(0xfff0d0, 0, 90, 0.5, 0.6, 1.2);
     this.headlight.position.set(0, 0.9, 1.8); this.headlight.target.position.set(0, 0, 22);

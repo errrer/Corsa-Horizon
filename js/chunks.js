@@ -12,10 +12,10 @@ const toLin = (c) => Math.pow(clamp(c, 0, 1), 2.2);
 const punch = (c, s = 1.3, b = 1.1) => { const a = (c[0] + c[1] + c[2]) / 3; return [(a + (c[0] - a) * s) * b, (a + (c[1] - a) * s) * b, (a + (c[2] - a) * s) * b]; };
 const hex = (h) => [((h >> 16) & 255) / 255, ((h >> 8) & 255) / 255, (h & 255) / 255];
 const mix3 = (a, b, t, o) => { o[0] = a[0] + (b[0] - a[0]) * t; o[1] = a[1] + (b[1] - a[1]) * t; o[2] = a[2] + (b[2] - a[2]) * t; return o; };
-const GRASS = { summer: hex(0x4b8a32), spring: hex(0x62a640), autumn: hex(0x9a7a2c), winter: hex(0xe2e6ee) };
+const GRASS = { summer: hex(0x3fa627), spring: hex(0x55bd36), autumn: hex(0x9a7a2c), winter: hex(0xe2e6ee) };
 const C = {
   sand: hex(0xdcc78f), desert: hex(0xd2ab6b), rock: hex(0x726c66), snow: hex(0xf3f6fb), dirt: hex(0x73543a),
-  asphalt: hex(0x5a5c64), gravel: hex(0x8a847a), seabed: hex(0x7f8c76), deep: hex(0x2e4f5c), forest: hex(0x2f5f26),
+  asphalt: hex(0x5a5c64), gravel: hex(0x8a847a), seabed: hex(0x7f8c76), deep: hex(0x2e4f5c), forest: hex(0x2e7a22),
 };
 
 // ---------- merged low-poly geometry builder ----------
@@ -291,7 +291,7 @@ export class ChunkManager {
         const forest = forestDensity(x, z);
         mix3(grassC, C.forest, season === 'winter' ? 0 : clamp(forest * 0.55, 0, 0.55), tmp);
         if (season !== 'winter') { tmp[0] *= 1 + pn * 0.18; tmp[1] *= 1 + pn * 0.14; }
-        c = mix3(tmp, C.desert, smoothstep(0.1, 0.3, dry), tmp2);
+        c = mix3(tmp, C.desert, smoothstep(0.3, 0.5, dry), tmp2);
         c = mix3(c, C.sand, 1 - smoothstep(1.0, 3.2, hh), tmp3);
         c = mix3(c, C.rock, Math.max(smoothstep(66, 92, hh), smoothstep(0.82, 0.66, il)), tmp2);
         c = mix3(c, C.snow, smoothstep(98, 122, hh) * (il > 0.7 ? 1 : 0.4), tmp3);
@@ -516,21 +516,21 @@ export class ChunkManager {
 
   buildTown(ch, ox, oz) {
     // towns sit at road intersections; any chunk within ~170 m of one draws its buildings
-    const rxLo = Math.floor((ox - 200) / S) - 1, rxHi = Math.ceil((ox + CH + 200) / S) + 1;
-    const rzLo = Math.floor((oz - 200) / S) - 1, rzHi = Math.ceil((oz + CH + 200) / S) + 1;
+    const rxLo = Math.floor((ox - 260) / S) - 1, rxHi = Math.ceil((ox + CH + 260) / S) + 1;
+    const rzLo = Math.floor((oz - 260) / S) - 1, rzHi = Math.ceil((oz + CH + 260) / S) + 1;
     const bg = new GeoBuilder(true);
     for (let rz = rzLo; rz <= rzHi; rz++) for (let rx = rxLo; rx <= rxHi; rx++) {
       const town = townAt(rx, rz);
       if (!town) continue;
-      if (town.x < ox - 220 || town.x > ox + CH + 220 || town.z < oz - 220 || town.z > oz + CH + 220) continue;
+      if (town.x < ox - 260 || town.x > ox + CH + 260 || town.z < oz - 260 || town.z > oz + CH + 260) continue;
       const rnd = mulberry32(town.seed);
-      for (let gz = -4; gz <= 4; gz++) for (let gx = -4; gx <= 4; gx++) {
+      for (let gz = -6; gz <= 6; gz++) for (let gx = -6; gx <= 6; gx++) {
         const r0 = rnd(), r1 = rnd(), r2 = rnd(), r3 = rnd(), r4 = rnd();
         const dd = Math.hypot(gx, gz);
-        if (dd < 1.2 || dd > 4.4 || r0 < 0.18) continue;
-        const bx = town.x + gx * 38 + (r1 - 0.5) * 12, bz = town.z + gz * 38 + (r2 - 0.5) * 12;
+        if (dd < 1.2 || dd > 6.4 || r0 < 0.1) continue;
+        const bx = town.x + gx * 34 + (r1 - 0.5) * 8, bz = town.z + gz * 34 + (r2 - 0.5) * 12;
         if (bx < ox || bx >= ox + CH || bz < oz || bz >= oz + CH) continue;
-        const w = 12 + r3 * 12, d = 12 + r4 * 12, hgt = (7 + r0 * 16 + Math.max(0, 4 - dd) * (6 + r1 * 14)) * (0.7 + r2 * 0.6);
+        const w = 12 + r3 * 12, d = 12 + r4 * 12, hgt = (7 + r0 * 16 + Math.max(0, 6 - dd) * (6 + r1 * 12)) * (0.7 + r2 * 0.6);
         const edge = Math.min(nearRoad(bx - w * 0.6, bz - d * 0.6).edge, nearRoad(bx + w * 0.6, bz + d * 0.6).edge, nearRoad(bx - w * 0.6, bz + d * 0.6).edge, nearRoad(bx + w * 0.6, bz - d * 0.6).edge, nearRoad(bx, bz).edge);
         if (edge < 7) continue;
         let lo = 1e9, hi = -1e9;
