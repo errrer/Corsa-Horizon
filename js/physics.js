@@ -242,13 +242,29 @@ export class CarPhysics {
     this.vy -= G * dt * (this.gravMul === undefined ? 1 : this.gravMul);
     this.y += this.vy * dt;
     const h = heightAt(this.x, this.z);
-    const vyg = this._gx * this.vx + this._gz * this.vz;
+    let vyg = this._gx * this.vx + this._gz * this.vz;
+    {
+      // steep terrain acts like a wall/hill, not a launch ramp: cap climb rate, bleed speed
+      const hv = Math.hypot(this.vx, this.vz);
+      if (vyg > 0 && hv > 1) {
+        const slope = vyg / hv;
+        const maxSlope = 0.5;
+        if (slope > maxSlope) {
+          const over = slope - maxSlope;
+          const k = Math.exp(-over * 9 * dt - (slope > 1.1 ? 0.25 : 0));
+          this.u *= k; this.v *= k;
+          if (slope > 1.1) { this.hitWall = (this.hitWall || 0) + 1; }
+          vyg = Math.min(vyg * (maxSlope + over * 0.15) / slope, 7);
+        }
+        vyg = Math.min(vyg, 9);
+      }
+    }
     const gap = this.y - h;
     if (gap <= 0 || (gap < 0.14 && this.vy <= vyg + 0.9)) {
       const impact = vyg - this.vy;
       if (!this.grounded) { this.lastAir = this.air; this.justLanded = true; }
       if (!this.grounded && this.air > 0.18 && impact > 3) this.landing = Math.max(this.landing, impact);
-      this.y = h; this.vy = vyg; this.grounded = true; this.air = 0;
+      this.y = h; this.vy = Math.min(vyg, this.vy > vyg ? this.vy : vyg); this.grounded = true; this.air = 0;
     } else {
       this.grounded = false; this.air += dt;
     }
