@@ -112,7 +112,7 @@ class Game {
     const canvas = $('c');
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: (PRESETS[set.quality] || PRESETS.medium).aa, powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.3;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.05;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(set.fov, innerWidth / innerHeight, 0.4, 4200);
@@ -167,7 +167,7 @@ class Game {
       const q = this.state.settings.quality, rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: q === 'ultra' || q === 'high' ? 4 : 2 });
       const comp = new EffectComposer(this.renderer, rt);
       comp.addPass(new RenderPass(this.scene, this.camera));
-      this.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.3, 0.6, 0.95);
+      this.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.28, 0.6, 1.4);
       comp.addPass(this.bloom); comp.addPass(new OutputPass());
       this.composer = comp; this.resize();
     } catch (e) { console.warn('Post-processing unavailable', e); this.composer = null; }
@@ -434,7 +434,7 @@ class Game {
     this.repoTown.update(dt, this.time, c);
     this.syncModel(dt);
     if (this.net) this.net.update(dt);
-    this.headlight.intensity = this.sky.night > 0.3 || this.weather.cur.fog > 0.4 ? 60 * Math.max(this.sky.night, 0.5) : 0;
+    this.headlight.intensity = this.sky.night > 0.3 || this.weather.cur.fog > 0.4 ? 160 * Math.max(this.sky.night, 0.5) : 0;
     this.particles.update(dt);
     if (this.mode !== 'title') this.audio.update(c, this.weather, this.paused || this.mode !== 'play');
     this.audio.radioTick();

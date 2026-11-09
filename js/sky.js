@@ -183,14 +183,14 @@ export class SkySystem {
     // lights
     const moon = sy2 < -0.08;
     const dirv = moon ? this.sunDir.clone().multiplyScalar(-1) : this.sunDir;
-    const sunI = 3.8 * dayF * (1 - 0.5 * cloud) * (1 - fogW * 0.3);
-    const moonI = 1.2 * smoothstep(-0.08, -0.3, sy2) * (1 - cloud * 0.6);
+    const sunI = 10.5 * dayF * (1 - 0.5 * cloud) * (1 - fogW * 0.3);
+    const moonI = 3.0 * smoothstep(-0.08, -0.3, sy2) * (1 - cloud * 0.6);
     this.sun.intensity = moon ? moonI : sunI;
     const lc = moon ? [0.55, 0.65, 1] : mixc([1, 0.97, 0.9], [1, 0.6, 0.35], sunset);
     rgb(this.sun.color, lc[0], lc[1], lc[2]);
     this.sun.position.set(focus.x + dirv.x * 160, focus.y + dirv.y * 160 + 20, focus.z + dirv.z * 160);
     this.sun.target.position.set(focus.x, focus.y, focus.z);
-    this.hemi.intensity = 0.6 + 1.1 * dayF * (1 - cloud * 0.15) + flash * 2.5;
+    this.hemi.intensity = 1.5 + 4.0 * dayF * (1 - cloud * 0.15) + flash * 6;
     const hs = mixc([0.16, 0.22, 0.42], [0.8, 0.9, 1], dayF);
     rgb(this.hemi.color, hs[0], hs[1], hs[2]);
     rgb(this.hemi.groundColor, 0.4 * dayF + 0.08, 0.34 * dayF + 0.08, 0.26 * dayF + 0.09);
