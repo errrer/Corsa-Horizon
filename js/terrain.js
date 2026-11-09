@@ -193,7 +193,7 @@ export function surfaceAt(x, z, h) {
   if (h > 108) return SURF.SNOW;
   if (h > 82) return SURF.ROCK;
   if (world.season === 'winter') return SURF.SNOW;
-  if (dryness(x, z) > 0.42) return SURF.SAND;
+  if (dryness(x, z) > 0.62) return SURF.SAND;
   return SURF.GRASS;
 }
 

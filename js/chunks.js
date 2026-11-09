@@ -325,11 +325,11 @@ export class ChunkManager {
         const forest = forestDensity(x, z);
         mix3(grassC, C.forest, season === 'winter' ? 0 : clamp(forest * 0.55, 0, 0.55), tmp);
         if (season !== 'winter') { tmp[0] *= 1 + pn * 0.18; tmp[1] *= 1 + pn * 0.14; }
-        c = mix3(tmp, C.desert, smoothstep(0.3, 0.5, dry), tmp2);
-        c = mix3(c, C.sand, 1 - smoothstep(1.0, 3.2, hh), tmp3);
+        c = mix3(tmp, C.desert, smoothstep(0.52, 0.72, dry), tmp2);
+        c = mix3(c, C.sand, 1 - smoothstep(0.6, 2.2, hh), tmp3);
         c = mix3(c, C.rock, Math.max(smoothstep(66, 92, hh), smoothstep(0.82, 0.66, il)), tmp2);
         c = mix3(c, C.snow, smoothstep(98, 122, hh) * (il > 0.7 ? 1 : 0.4), tmp3);
-        ss = Math.max(smoothstep(0.3, 0.5, dry), 1 - smoothstep(1.0, 3.2, hh));
+        ss = Math.max(smoothstep(0.52, 0.72, dry), 1 - smoothstep(0.6, 2.2, hh));
         const rk = Math.max(smoothstep(66, 92, hh), smoothstep(0.82, 0.66, il));
         sg = (1 - ss) * (1 - rk) * (season === 'winter' ? 0.2 : 1);
       }
