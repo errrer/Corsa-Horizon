@@ -202,7 +202,7 @@ export function townAt(rx, rz) {
   const key = rx + ',' + rz;
   if (townCache.has(key)) return townCache.get(key);
   let t = null;
-  if (!(rx === 0 && rz === 0) && hash2(rx, rz, world.seed + 5) < 0.42) {
+  if (!(rx === 0 && rz === 0) && hash2(rx, rz, world.seed + 5) < 0.85) {
     const c = intersection(0, rz, 1, rx, {});
     const h = heightNoRamp(c.x, c.z);
     if (h > 3) t = { rx, rz, x: c.x, z: c.z, seed: Math.floor(hash2(rx, rz, world.seed + 6) * 1e6) };

@@ -15,7 +15,7 @@ const mix3 = (a, b, t, o) => { o[0] = a[0] + (b[0] - a[0]) * t; o[1] = a[1] + (b
 const GRASS = { summer: hex(0x4b8a32), spring: hex(0x62a640), autumn: hex(0x9a7a2c), winter: hex(0xe2e6ee) };
 const C = {
   sand: hex(0xdcc78f), desert: hex(0xd2ab6b), rock: hex(0x726c66), snow: hex(0xf3f6fb), dirt: hex(0x73543a),
-  asphalt: hex(0x26262b), gravel: hex(0x66615a), seabed: hex(0x7f8c76), deep: hex(0x2e4f5c), forest: hex(0x2f5f26),
+  asphalt: hex(0x5a5c64), gravel: hex(0x8a847a), seabed: hex(0x7f8c76), deep: hex(0x2e4f5c), forest: hex(0x2f5f26),
 };
 
 // ---------- merged low-poly geometry builder ----------
@@ -141,13 +141,13 @@ export function makeSignTex(text, bg = '#0d1117', fg = '#e6edf3', accent = '#2ea
 export function makeMaterials() {
   const grain = canvasTex(256, 256, (c, w, h) => noiseFill(c, w, h, '#d8d8d8', 0.35, 5000));
   const road = canvasTex(128, 256, (c, w, h) => {
-    noiseFill(c, w, h, '#35363b', 0.25, 4500);
+    noiseFill(c, w, h, '#6d7078', 0.22, 4500);
     c.fillStyle = '#e8e8e8'; c.fillRect(5, 0, 4, h); c.fillRect(w - 9, 0, 4, h);
     c.fillStyle = '#e3b72b'; c.fillRect(w / 2 - 5, 0, 3, h); c.fillRect(w / 2 + 2, 0, 3, h);
     c.fillStyle = '#d8d8d8';
     for (let y = 0; y < h; y += 128) { c.fillRect(w * 0.25 - 1.5, y, 3, 64); c.fillRect(w * 0.75 - 1.5, y, 3, 64); }
   });
-  const plain = canvasTex(128, 128, (c, w, h) => noiseFill(c, w, h, '#35363b', 0.25, 2500));
+  const plain = canvasTex(128, 128, (c, w, h) => noiseFill(c, w, h, '#6d7078', 0.22, 2500));
   const dirt = canvasTex(128, 128, (c, w, h) => {
     noiseFill(c, w, h, '#7a5b3a', 0.35, 4000);
     c.fillStyle = 'rgba(60,40,22,0.35)'; c.fillRect(w * 0.26, 0, w * 0.12, h); c.fillRect(w * 0.62, 0, w * 0.12, h);
