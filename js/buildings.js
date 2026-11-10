@@ -24,7 +24,8 @@ export async function loadBuildings() {
   if (BUILD.ready) return;
   for (const d of DEFS) {
     try {
-      const gltf = await new Promise((res, rej) => new GLTFLoader().parse(await0(await fetchGlb(d.id)), '', res, rej));
+      const buf = await fetchGlb(d.id);
+      const gltf = await new Promise((res, rej) => new GLTFLoader().parse(buf, '', res, rej));
       const parts = []; const box = new THREE.Box3();
       gltf.scene.updateMatrixWorld(true);
       gltf.scene.traverse((o) => {
@@ -39,4 +40,3 @@ export async function loadBuildings() {
   }
   BUILD.ready = BUILD.list.length > 0;
 }
-const await0 = (b) => b;
