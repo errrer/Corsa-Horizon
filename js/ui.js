@@ -347,9 +347,9 @@ export class UI {
   }
   tOnline(body) {
     const n = this.g.net, set = this.g.state.settings;
-    body.innerHTML = `<h3>Online multiplayer</h3><p class="mut">Peer-to-peer: one player hosts a room, friends join with the 5-letter code. Everyone sees each other's cars with name tags. Players join the host's world.</p>
+    body.innerHTML = `<h3>Horizon World server</h3><p class="mut">Everyone plays in one shared open world, up to 20 drivers per server. You are connected automatically when you start driving; if a server is full you roll over to the next one. Online play needs the game running from a normal website such as GitHub Pages.</p>
     <label class="set">Your name <input type="text" data-set="name" maxlength="16" value="${esc(set.name || 'Racer')}" style="width:180px"></label>
-    <div class="row"><button class="btn primary" data-act="hostRoom">Host a room</button> <input type="text" id="roomIn" placeholder="ROOM CODE" maxlength="5" style="width:130px;text-transform:uppercase"> <button class="btn" data-act="joinRoom">Join</button> <button class="btn danger" data-act="leaveRoom">Leave</button></div>
+    <div class="row"><button class="btn primary" data-act="joinRoom">Connect</button> <button class="btn danger" data-act="leaveRoom">Go offline</button></div>
     <div id="netStatus" class="gold" style="margin:12px 0;font-weight:700"></div><div id="netList"></div>`;
     this.refreshOnline();
   }
@@ -412,9 +412,8 @@ export class UI {
       case 'buy': { const s = carById(el.dataset.id); if (st.credits >= s.price && !st.cars[s.id]) { st.credits -= s.price; g.giveCar(s.id); st.current = s.id; g.applyCar(true); g.audio.blip('level'); g.save(); this.toast(`Purchased ${s.name}`, 'good'); this.renderMenu(); } break; }
       case 'sell': { const s = carById(el.dataset.id); if (confirm(`Sell ${s.name}?`)) { st.credits += Math.round(s.price * 0.45); delete st.cars[s.id]; st.current = Object.keys(st.cars)[0]; g.applyCar(true); g.save(); this.renderMenu(); } break; }
       case 'spin': this.closeMenu(); g.spinWheel(); break;
-      case 'hostRoom': g.net.host(); break;
-      case 'joinRoom': g.net.join($('roomIn').value); break;
-      case 'leaveRoom': g.net.leave(); break;
+            case 'joinRoom': g.state.settings.online = true; g.net.join(); break;
+      case 'leaveRoom': g.state.settings.online = false; g.net.leave(); break;
       case 'applySeed': { const v = parseInt($('seedIn').value, 10) || 1; this.closeMenu(); g.newWorld(v); break; }
       case 'randSeed': { const v = Math.floor(Math.random() * 99999) + 1; this.closeMenu(); g.newWorld(v); break; }
       case 'exportSave': { const t = g.exportSave(); try { navigator.clipboard.writeText(t); this.toast('Save copied to clipboard', 'good'); } catch (err) { prompt('Copy your save:', t); } break; }

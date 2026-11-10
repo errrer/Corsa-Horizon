@@ -18,6 +18,7 @@ const STYLES = {
 
 STYLES.gt3 = { ...STYLES.super, L: 4.57, W: 1.85, H: 1.28, wr: 0.35 };
 STYLES.huracan = { ...STYLES.super, L: 4.52, W: 1.93, H: 1.17, wr: 0.35 };
+STYLES.m5 = { ...STYLES.gt, L: 4.97, W: 1.9, H: 1.47, wr: 0.352 };
 const B = (o) => ({ cgH: 0.5, brake: 1.15, stiff: 9.5, offroad: 0.1, steer: 0.55, roll: 1, cyl: 4, nitroBase: 1, ...o });
 const RAW = [
   B({ id: 'commit', name: 'Commit Compact', style: 'hatch', price: 0, mass: 1150, kw: 95, top: 185, drive: 'FWD', mu: 1.12, wf: 0.6, color: 0x2ea043, cyl: 4, desc: 'Small, honest and free. Every repo starts here.' }),
@@ -37,7 +38,7 @@ const RAW = [
   B({ id: 'lint', name: 'Lint Trail Truck', style: 'suv', price: 52000, mass: 2250, kw: 260, top: 195, drive: 'AWD', mu: 1.12, wf: 0.5, offroad: 1, cgH: 0.78, roll: 1.5, color: 0x9e6a03, cyl: 6, desc: 'Cleans up any trail you point it at.' }),
   B({ id: 'diff', name: 'Diff Drift King', style: 'coupe', price: 78000, mass: 1290, kw: 380, top: 270, drive: 'RWD', mu: 1.2, wf: 0.52, steer: 0.66, gripR: 0.92, color: 0xd29922, cyl: 6, desc: 'Shows exactly what changed, in tyre smoke.' }),
   B({ id: 'stack', name: 'Stack SUV', style: 'suv', price: 62000, mass: 2050, kw: 330, top: 235, drive: 'AWD', mu: 1.14, wf: 0.5, offroad: 0.8, cgH: 0.74, roll: 1.4, color: 0x21262d, cyl: 8, desc: 'Family hauler with a very deep call stack.' }),
-  B({ id: 'pipeline', name: 'Pipeline GT', style: 'gt', price: 120000, mass: 1560, kw: 420, top: 305, drive: 'AWD', mu: 1.28, wf: 0.5, downforce: 0.7, color: 0x388bfd, cyl: 8, desc: 'Green on every stage, quick on every straight.' }),
+  B({ id: 'pipeline', name: 'BMW M5', style: 'm5', glb: 'm5', price: 135000, mass: 1940, kw: 441, top: 305, drive: 'AWD', mu: 1.3, wf: 0.54, downforce: 0.5, steer: 0.54, color: 0x388bfd, cyl: 8, desc: 'Twin-turbo V8 super saloon. Model: 2018 BMW M5 (CC BY).' }),
   B({ id: 'yank', name: 'Yank SS Muscle', style: 'muscle', price: 88000, mass: 1750, kw: 450, top: 285, drive: 'RWD', mu: 1.12, wf: 0.54, gripR: 0.93, color: 0xf0883e, cyl: 8, desc: 'Force-pushed to the limit.' }),
   B({ id: 'blame', name: 'Blame Buggy XL', style: 'buggy', price: 45000, mass: 980, kw: 230, top: 190, drive: 'AWD', mu: 1.22, wf: 0.46, offroad: 1, steer: 0.66, color: 0xda3633, cyl: 6, desc: 'It was not your fault. It was the jump.' }),
   B({ id: 'cherry', name: 'Cherry-Pick Speedster', style: 'roadster', price: 105000, mass: 1050, kw: 340, top: 285, drive: 'RWD', mu: 1.3, wf: 0.5, steer: 0.6, color: 0xe3b341, cyl: 6, desc: 'Takes only the best commits.' }),

@@ -140,7 +140,7 @@ class Game {
     await this.setupPost();
     this.setLoad(0.06, 'Loading car models...');
     try { this.setLoad(0.06, 'Loading city towers...'); await loadBuildings(); } catch (e) { console.warn('buildings unavailable', e); }
-    for (const k of ['huracan', 'gt3']) { try { this.setLoad(0.07, 'Loading car models...'); await loadModel(k); } catch (e) { console.warn(k + ' model unavailable', e); } }
+    for (const k of ['huracan', 'gt3', 'm5']) { try { this.setLoad(0.07, 'Loading car models...'); await loadModel(k); } catch (e) { console.warn(k + ' model unavailable', e); } }
     this.applyCar(true);
     this.setLoad(0.08, 'Raising the festival...');
     await frame();
@@ -335,6 +335,7 @@ class Game {
   resize() { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); this.renderer.setSize(innerWidth, innerHeight, false); if (this.composer) { this.composer.setPixelRatio(this.renderer.getPixelRatio()); this.composer.setSize(innerWidth, innerHeight); this.bloom.resolution.set(innerWidth / 2, innerHeight / 2); } }
   start() {
     this.audio.init(); this.audio.setVolumes({}); this.audio.setStation(this.state.settings.radio || 0);
+    if (this.net && this.state.settings.online !== false) setTimeout(() => this.net.autoJoin(), 1500);
     $('title').classList.add('hidden'); $('hud').classList.remove('hidden'); this.mode = 'play'; this.last = performance.now();
     if (!document.fullscreenElement && /Mobi|Android/i.test(navigator.userAgent)) document.documentElement.requestFullscreen?.().catch(() => {});
   }

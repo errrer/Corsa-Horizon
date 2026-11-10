@@ -26,6 +26,15 @@ const MODELS = {
     paint: 'Porsche_911GT3_2022Paint_Material', tail: 'RED_GLASS', head: 'Porsche_911GT3_2022LightA_Material', wr: 0.35, wbh: 1.28, wx: 0.8,
   },
 };
+MODELS.m5 = {
+  url: 'assets/m5.glb', b64: ['assets/m5.b64.txt'], scale: 100, flip: false, center: { x: 0, y: 0, z: 0 },
+  merge: true, mode: 'tri', wheelMats: ['BMW_M5CSRewardRecycled_2022_Wheel1A_3D_3DWheel1A_Material', 'bMAT_Details_Hub1', 'bMAT_Details_Disk1', 'bM_Rim_Main_Max1', 'bM_Rim_NoTint_Max1', 'bM_RimBadge_Max1', 'bM_Rim_Secondary_Max1'],
+  wheels: [
+    { x: 0.0081, y: 0.00354, z: 0.01622, R: 0.00352, hw: 0.0019, front: true, side: 1 }, { x: -0.0081, y: 0.00354, z: 0.01622, R: 0.00352, hw: 0.0019, front: true, side: -1 },
+    { x: 0.00795, y: 0.00360, z: -0.01373, R: 0.00358, hw: 0.0019, front: false, side: 1 }, { x: -0.00795, y: 0.00360, z: -0.01373, R: 0.00358, hw: 0.0019, front: false, side: -1 },
+  ],
+  paint: 'bM_CarPaint_Max1', tail: 'bM_LightGlassNormal_OuterRed_Low1', head: 'bM_LightGlassNormal_Clear_Low1', wr: 0.352, wbh: 1.5, wx: 0.81,
+};
 const TPL = {};
 
 async function fetchBuffer(cfg) {
@@ -95,6 +104,17 @@ export async function loadModel(key) {
   for (const gr of Object.values(groups)) {
     const merged = mergeGeometries(gr.list, false);
     if (merged) parts.push({ geom: merged, mat: gr.mat, name: gr.mat.name, wheel: gr.k, spin: gr.kind === 'wheel' });
+  }
+  if (cfg.merge) {
+    // many tiny meshes -> one mesh per material / wheel, to keep draw calls low
+    const by = new Map();
+    for (const p of parts) { const k = p.name + '|' + p.wheel + '|' + p.spin; (by.get(k) || by.set(k, []).get(k)).push(p); }
+    parts.length = 0;
+    for (const list of by.values()) {
+      const gs = list.map((p) => { const g = clean(p.geom); if (!g.index) g.setIndex([...Array(g.attributes.position.count).keys()]); if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2)); return g; });
+      const merged = gs.length > 1 ? mergeGeometries(gs, false) : gs[0];
+      if (merged) parts.push({ ...list[0], geom: merged });
+    }
   }
   TPL[key] = { cfg, parts, mats };
 }
