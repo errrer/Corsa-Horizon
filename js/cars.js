@@ -18,6 +18,7 @@ const STYLES = {
 
 STYLES.gt3 = { ...STYLES.super, L: 4.57, W: 1.85, H: 1.28, wr: 0.35 };
 STYLES.huracan = { ...STYLES.super, L: 4.52, W: 1.93, H: 1.17, wr: 0.35 };
+STYLES.lt600 = { ...STYLES.super, L: 4.60, W: 1.93, H: 1.20, wr: 0.33 };
 STYLES.m5 = { ...STYLES.gt, L: 4.97, W: 1.9, H: 1.47, wr: 0.352 };
 // Per-car look overrides: proportions plus extra bodywork, so no two roster cars share a silhouette.
 const LOOKS = {
@@ -39,7 +40,6 @@ const LOOKS = {
   cherry: { L: 4.15, W: 1.86, H: 1.18, wr: 0.33, rollbar: 1, slim: 1, fins: 1, tailBar: 1, stripe: 0x15181c },
   buggy: { flares: 2, lightbar: 1, spare: 1 },
   blame: { L: 3.7, W: 2.0, wr: 0.44, clear: 0.38, flares: 2, lightbar: 1, bull: 1 },
-  release: { L: 4.55, W: 2.0, H: 1.12, slim: 1, tailBar: 1, diffuser: 1, fins: 1, spoiler: 0, wing: 1, stripe: 0xffffff },
   mainst: { L: 4.6, W: 2.02, H: 1.1, slim: 1, tailBar: 1, diffuser: 1, quad: 1, spoiler: 1, hoodvent: 1, roofDark: 1 },
   hash: { L: 4.75, W: 2.08, H: 1.08, slim: 1, tailBar: 1, diffuser: 1, fins: 1, wing: 1, hoodvent: 1, stripe: 0x15181c },
   deploy: { L: 4.85, W: 2.1, H: 1.06, hood: 0.24, tail: 0.16, slim: 1, tailBar: 1, diffuser: 1, fins: 1, wing: 1, stripe: 0xffffff },
@@ -55,7 +55,7 @@ const RAW = [
   B({ id: 'stash', name: 'Stash GT', style: 'gt', price: 95000, mass: 1500, kw: 360, top: 290, drive: 'RWD', mu: 1.22, wf: 0.52, downforce: 0.5, color: 0x1f6feb, cyl: 8, desc: 'A grand tourer that always keeps your work safe.' }),
   B({ id: 'rebase', name: 'Rebase Roadster', style: 'roadster', price: 70000, mass: 1100, kw: 270, top: 260, drive: 'RWD', mu: 1.25, wf: 0.5, steer: 0.6, color: 0xd29922, cyl: 4, desc: 'Light, open-top and rewrites history.' }),
   B({ id: 'buggy', name: 'Pull Request Buggy', style: 'buggy', price: 30000, mass: 850, kw: 160, top: 170, drive: 'AWD', mu: 1.2, wf: 0.45, offroad: 1, steer: 0.65, color: 0xe3b341, cyl: 4, desc: 'Approved by everyone. Jumps over anything.' }),
-  B({ id: 'release', name: 'Release Candidate', style: 'super', price: 210000, mass: 1450, kw: 520, top: 330, drive: 'AWD', mu: 1.35, wf: 0.45, downforce: 1.0, color: 0xf85149, cyl: 10, desc: 'Almost production-ready. Mostly just fast.' }),
+  B({ id: 'release', name: 'McLaren 600LT', style: 'lt600', glb: 'lt600', price: 240000, mass: 1305, kw: 441, top: 328, drive: 'RWD', mu: 1.42, wf: 0.42, downforce: 1.0, steer: 0.5, color: 0xf0883e, cyl: 8, gripR: 0.97, desc: 'Longtail track weapon: 3.8 L twin-turbo V8, 592 hp, 1,247 kg dry. Model: 2019 McLaren 600LT (CC BY).' }),
   B({ id: 'huracan', name: 'Lamborghini Huracán', style: 'huracan', glb: 'huracan', price: 185000, mass: 1422, kw: 449, top: 325, drive: 'AWD', mu: 1.42, wf: 0.43, downforce: 0.9, steer: 0.52, color: 0xf0883e, cyl: 10, desc: 'Italian V10 supercar. Model by RBLXSupercars (CC BY 4.0).' }),
   B({ id: 'gt3', name: 'Porsche 911 GT3', style: 'gt3', glb: 'gt3', price: 165000, mass: 1435, kw: 375, top: 318, drive: 'RWD', mu: 1.4, wf: 0.39, downforce: 1.1, steer: 0.5, color: 0xe6edf3, cyl: 6, desc: 'Track-bred flat-six. Model by Ddiaz Design (CC BY 4.0).' }),
   B({ id: 'patch', name: 'Patch Hot Hatch', style: 'hatch', price: 18000, mass: 1080, kw: 140, top: 215, drive: 'FWD', mu: 1.2, wf: 0.6, steer: 0.6, color: 0xf778ba, cyl: 4, desc: 'Tiny, loud and fixes your commute in one patch.' }),

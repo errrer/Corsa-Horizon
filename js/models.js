@@ -1,5 +1,5 @@
 // Loads GLB car models, splits their wheels out so they can spin and steer, and builds per-car instances.
-// Credits: "2016 Lamborghini Huracan" by RBLXSupercars and "2022 Porsche 911 GT3 (992)" by Ddiaz Design (both CC BY 4.0, Sketchfab).
+// Credits: "2016 Lamborghini Huracan" by RBLXSupercars, "2022 Porsche 911 GT3 (992)" by Ddiaz Design, 2018 BMW M5 and 2019 McLaren 600LT (all CC BY 4.0, Sketchfab).
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -34,6 +34,15 @@ MODELS.m5 = {
     { x: 0.00795, y: 0.00360, z: -0.01373, R: 0.00358, hw: 0.0019, front: false, side: 1 }, { x: -0.00795, y: 0.00360, z: -0.01373, R: 0.00358, hw: 0.0019, front: false, side: -1 },
   ],
   paint: 'bM_CarPaint_Max1', tail: 'bM_LightGlassNormal_OuterRed_Low1', head: 'bM_LightGlassNormal_Clear_Low1', wr: 0.352, wbh: 1.5, wx: 0.81,
+};
+MODELS.lt600 = {
+  url: 'assets/lt600.glb', b64: ['assets/lt600.b64.txt'], scale: 100, flip: false, center: { x: 0, y: 0, z: -0.00065 },
+  merge: true, mode: 'tri', wheelMats: ['McLaren_600LTSpiderRewardRecycled_2020_Wheel1A_3D_3DWheel2A_Material', 'mM_Rim_Main_SetLT_Max1', 'mM_RimBadge_SetLT_Max1', 'mphong1'],
+  wheels: [
+    { x: 0.0083, y: 0.00315, z: 0.01275, R: 0.0033, hw: 0.0015, front: true, side: 1 }, { x: -0.0083, y: 0.00315, z: 0.01275, R: 0.0033, hw: 0.0015, front: true, side: -1 },
+    { x: 0.00805, y: 0.0035, z: -0.01405, R: 0.0035, hw: 0.0017, front: false, side: 1 }, { x: -0.00805, y: 0.0035, z: -0.01405, R: 0.0035, hw: 0.0017, front: false, side: -1 },
+  ],
+  paint: 'mM_CarPaint_Max1', tail: 'mM_LightGlass_Red_Low1', head: 'mM_LightGlassNormal_Clear_Low1', wr: 0.33, wbh: 1.34, wx: 0.82,
 };
 const TPL = {};
 
