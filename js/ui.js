@@ -380,12 +380,21 @@ export class UI {
     <label class="set">Radio station ${sel('radio', STATIONS.map((s, i) => [i, s.name]))}</label>
     <label class="set">ABS ${chk('abs')}</label><label class="set">Traction control ${chk('tcs')}</label><label class="set">Racing line ${chk('line')}</label><label class="set">Camera shake ${chk('shake')}</label><label class="set">Tutorial hints ${chk('hints')}</label>
     <label class="set">World seed <span><input type="number" id="seedIn" value="${set.seed}" style="width:110px"> <button class="btn small" data-act="applySeed">Generate new world</button> <button class="btn small" data-act="randSeed">Random</button></span></label>
+    <h3 style="margin-top:18px">Racing wheel (G29, G920, Thrustmaster, Fanatec...)</h3>
+    <div class="mut" style="margin-bottom:8px">${this.g.padName ? 'Detected: ' + esc(this.g.padName) : 'No wheel detected - plug it in and turn the wheel or press a pedal, then reopen this page.'}</div>
+    <label class="set">Use wheel when connected ${chk('wheelOn')}</label>
+    <label class="set">Wheel rotation (degrees lock-to-lock) ${rng('wheelRange', 180, 900, 10)}</label>
+    <label class="set">Steering response curve ${rng('wheelCurve', 0.6, 1.6, 0.05)}</label>
+    <label class="set">Centre deadzone ${rng('wheelDead', 0, 0.1, 0.005)}</label>
+    <div class="row"><button class="btn primary" data-act="wheelCal">Calibrate wheel &amp; pedals</button> <button class="btn" data-act="wheelReset">Reset mapping</button></div>
+    <div class="mut" style="margin-top:6px;line-height:1.7">Right paddle nitro - left paddle / X handbrake - circle rewind - triangle camera - options menu - share map. Force feedback is not available to web pages, but steering, pedals and buttons are fully supported.</div>
     <h3 style="margin-top:18px">Save data</h3>
     <div class="row"><button class="btn" data-act="exportSave">Export save</button><button class="btn" data-act="importSave">Import save</button><button class="btn danger" data-act="wipe">Erase all progress</button></div>`;
   }
   tHelp(body) {
     body.innerHTML = `<h3>Controls</h3><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
     <div class="card"><h4>Keyboard</h4><div class="mut" style="line-height:1.9">W / ↑ throttle · S / ↓ brake & reverse<br>A D / ← → steer · <b>Space</b> handbrake<br><b>Shift</b> nitro · <b>H</b> horn · <b>G</b> hold to rewind<br><b>C</b> camera · <b>V</b> look back · <b>R</b> next radio station<br><b>M</b> map · <b>Esc</b> pause menu · <b>Enter</b> start event<br><b>E</b> interact · <b>T</b> reset to road · <b>P</b> photo mode · <b>F</b> fullscreen</div></div>
+    <div class="card"><h4>Racing wheel</h4><div class="mut" style="line-height:1.9">Plug in a G29 / G920 / any wheel, then Settings &gt; Racing wheel &gt; Calibrate.<br>Paddles nitro / handbrake - circle rewind - triangle camera</div></div>
     <div class="card"><h4>Gamepad</h4><div class="mut" style="line-height:1.9">Left stick steer · RT gas · LT brake<br>A handbrake · B / RB nitro · X rewind · Y camera<br>Start menu · Back map · D-pad up start event · D-pad right radio</div></div>
     <div class="card"><h4>Touch</h4><div class="mut" style="line-height:1.9">On-screen buttons appear automatically on touch devices.</div></div>
     <div class="card"><h4>How to play</h4><div class="mut" style="line-height:1.7">Drive through glowing beams to start races, drift zones, speed traps and speed zones. Jump danger-sign ramps, smash bonus boards, find barns, chain skills for XP, level up for wheelspins, and buy or upgrade cars.</div></div></div>`;
@@ -413,6 +422,8 @@ export class UI {
       case 'sell': { const s = carById(el.dataset.id); if (confirm(`Sell ${s.name}?`)) { st.credits += Math.round(s.price * 0.45); delete st.cars[s.id]; st.current = Object.keys(st.cars)[0]; g.applyCar(true); g.save(); this.renderMenu(); } break; }
       case 'spin': this.closeMenu(); g.spinWheel(); break;
             case 'joinRoom': g.state.settings.online = true; g.net.join(); break;
+      case 'wheelCal': g.toggleMenu && g.paused ? g.toggleMenu() : 0; g.startCalibration(); break;
+      case 'wheelReset': g.state.settings.wheelMap = null; g.save(); g.ui.toast('Wheel mapping reset', 'info'); break;
       case 'leaveRoom': g.state.settings.online = false; g.net.leave(); break;
       case 'applySeed': { const v = parseInt($('seedIn').value, 10) || 1; this.closeMenu(); g.newWorld(v); break; }
       case 'randSeed': { const v = Math.floor(Math.random() * 99999) + 1; this.closeMenu(); g.newWorld(v); break; }

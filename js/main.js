@@ -155,6 +155,7 @@ class Game {
     this.updateTitleInfo();
     $('loading').classList.add('hidden'); $('title').classList.remove('hidden');
     this.mode = 'title'; this.last = performance.now();
+    if (this.net && set.online !== false) setTimeout(() => this.net.autoJoin(), 800); // join the shared world straight away
     if ('ontouchstart' in window || navigator.maxTouchPoints > 1) $('touch').classList.remove('hidden');
     requestAnimationFrame((t) => this.loop(t));
   }
@@ -384,25 +385,83 @@ class Game {
     $('c').toBlob((b) => { if (!b) return; const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `horizon-pages-${Date.now()}.png`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); });
     this.audio.blip('photo'); this.ui.toast('Photo saved', 'good');
   }
+  // ---------- racing wheel (G29 / G920 / Thrustmaster / Fanatec ...) + gamepad ----------
+  isWheel(p) { return p && /wheel|g29|g920|g923|g27|g25|driving force|racing|thrustmaster|t300|t150|tmx|fanatec|simagic|moza|ffb|sim ?racing|c24f|c260|c262|046d/i.test(p.id) && !/xbox|dualshock|dualsense|wireless controller|8bitdo|pro controller/i.test(p.id); }
+  wheelMap() {
+    const m = this.state.settings.wheelMap; if (m) return m;
+    // sensible defaults for a Logitech wheel in Chrome; calibrate in Settings if pedals are on other axes
+    return { steer: 0, thr: { i: 2, rest: 1, full: -1 }, brk: { i: 3, rest: 1, full: -1 }, clu: null };
+  }
   readPad() {
-    const pads = navigator.getGamepads ? navigator.getGamepads() : []; const p = pads && [...pads].find((x) => x && x.connected);
+    const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter((x) => x && x.connected) : [];
+    const set = this.state.settings;
+    const wheel = set.wheelOn !== false ? pads.find((x) => this.isWheel(x)) : null;
+    const p = wheel || pads.find((x) => !this.isWheel(x)) || pads[0];
     const prev = this.pad.buttons; const b = p ? p.buttons.map((x) => x.pressed) : []; const edge = (i) => b[i] && !prev[i];
-    this.pad = { buttons: b, axes: p ? p.axes : [], p, tr: p ? p.buttons[7]?.value || 0 : 0, tl: p ? p.buttons[6]?.value || 0 : 0 };
+    this.pad = { buttons: b, axes: p ? p.axes : [], p, wheel: !!wheel, name: p ? p.id : '', tr: p ? p.buttons[7]?.value || 0 : 0, tl: p ? p.buttons[6]?.value || 0 : 0, ws: 0 };
+    this.padName = wheel ? wheel.id : '';
+    if (this.cal && this.cal.active) { this.calibrate(pads); return; }
+    if (wheel) {
+      const m = this.wheelMap(), ax = wheel.axes;
+      const pedal = (d) => { if (!d || ax[d.i] === undefined) return 0; const v = (ax[d.i] - d.rest) / ((d.full - d.rest) || -2); return clamp(v < 0.03 ? 0 : v, 0, 1); };
+      let raw = ax[m.steer] || 0; const dz = set.wheelDead || 0.02; raw = Math.abs(raw) < dz ? 0 : raw;
+      const range = set.wheelRange || 540, k = 900 / range; // wheel range 900 deg => 1:1; 540 deg lock-to-lock => 1.67x
+      let st = clamp(raw * k, -1, 1); st = Math.sign(st) * Math.pow(Math.abs(st), set.wheelCurve || 1);
+      this.pad.ws = st; this.pad.tr = pedal(m.thr); this.pad.tl = pedal(m.brk);
+      // face / paddle buttons: 4 right paddle nitro, 5 left paddle handbrake, 0 X handbrake, 1 square nitro, 2 circle rewind, 3 triangle camera
+    }
     if (!p) return;
+    const bm = wheel ? { menu: 9, map: 8, cam: 3, ev: 12, radio: 15 } : { menu: 9, map: 8, cam: 3, ev: 12, radio: 15 };
     if (this.mode === 'play') {
-      if (edge(9)) this.toggleMenu(); if (edge(8)) this.toggleMenu('map');
-      if (!this.paused) { if (edge(3)) this.nextCam(); if (edge(12)) this.events.tryStart(); if (edge(15)) this.setStation(this.audio.station + 1); if (edge(0) && false) this.interact(); }
+      if (edge(bm.menu)) this.toggleMenu(); if (edge(bm.map)) this.toggleMenu('map');
+      if (!this.paused) { if (edge(bm.cam)) this.nextCam(); if (edge(bm.ev)) this.events.tryStart(); if (edge(bm.radio)) this.setStation(this.audio.station + 1); }
     } else if (this.mode === 'title' && (edge(0) || edge(9))) this.start();
   }
+  // guided pedal / steering calibration for any wheel
+  startCalibration() {
+    this.cal = { active: true, step: 0, t: 0, min: [], max: [], rest: [], used: [] };
+    this.calMsg('Racing wheel setup: turn the wheel fully left, then fully right...');
+  }
+  calMsg(t) {
+    let el = $('calMsg'); if (!el) { el = document.createElement('div'); el.id = 'calMsg'; el.style.cssText = 'position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:60;background:rgba(13,17,23,.92);color:#e6edf3;border:2px solid #58a6ff;border-radius:14px;padding:16px 26px;font:700 18px system-ui;text-align:center;max-width:80vw'; document.body.appendChild(el); }
+    el.textContent = t; el.style.display = t ? 'block' : 'none';
+  }
+  calibrate(pads) {
+    const cal = this.cal, p = pads.find((x) => this.isWheel(x)) || pads[0];
+    if (!p) { this.calMsg('No wheel found - plug it in and press a pedal'); return; }
+    const dt = 1 / 60, ax = p.axes;
+    if (cal.t === 0 || !cal.rest.length) { cal.rest = [...ax]; cal.min = [...ax]; cal.max = [...ax]; }
+    cal.t += dt;
+    ax.forEach((v, i) => { cal.min[i] = Math.min(cal.min[i], v); cal.max[i] = Math.max(cal.max[i], v); });
+    const need = [4, 3.5, 3.5][cal.step];
+    if (cal.t < need) return;
+    const range = (i) => cal.max[i] - cal.min[i];
+    let best = -1, bv = 0.5;
+    for (let i = 0; i < ax.length; i++) { if (cal.used.includes(i)) continue; if (range(i) > bv) { bv = range(i); best = i; } }
+    if (best < 0) { this.calMsg('Did not see any movement - try again (Settings > Wheel setup)'); cal.active = false; setTimeout(() => this.calMsg(''), 3500); return; }
+    const m = this.state.settings.wheelMap || { steer: 0, thr: null, brk: null };
+    if (cal.step === 0) { m.steer = best; cal.used.push(best); this.calMsg('Now press the THROTTLE pedal fully down, then release...'); }
+    else {
+      const rest = cal.rest[best], full = Math.abs(cal.max[best] - rest) > Math.abs(cal.min[best] - rest) ? cal.max[best] : cal.min[best];
+      const d = { i: best, rest, full }; cal.used.push(best);
+      if (cal.step === 1) { m.thr = d; this.calMsg('Now press the BRAKE pedal fully down, then release...'); } else { m.brk = d; }
+    }
+    cal.step++; cal.t = 0; cal.rest = []; 
+    if (cal.step >= 3) { this.state.settings.wheelMap = m; this.save(); cal.active = false; this.calMsg('Wheel calibrated!'); setTimeout(() => this.calMsg(''), 2200); this.ui.refreshMenu && this.ui.refreshMenu(); }
+    else this.state.settings.wheelMap = m;
+  }
   input() {
-    const k = this.keys, t = this.touch, pad = this.pad, ax = pad.axes[0] || 0, dz = Math.abs(ax) > 0.12 ? ax : 0;
+    const k = this.keys, t = this.touch, pad = this.pad, wheelOn = pad.wheel;
+    const ax = wheelOn ? 0 : (pad.axes[0] || 0), dz = Math.abs(ax) > 0.12 ? ax : 0;
     let steer = (k.KeyA || k.ArrowLeft || t.left ? 1 : 0) - (k.KeyD || k.ArrowRight || t.right ? 1 : 0) - dz;
+    const wheelSteer = wheelOn ? -pad.ws : 0;
     const throttle = Math.max(k.KeyW || k.ArrowUp || t.gas ? 1 : 0, pad.tr || 0);
     const brake = Math.max(k.KeyS || k.ArrowDown || t.brake ? 1 : 0, pad.tl || 0);
-    const hand = !!(k.Space || t.hand || pad.buttons[0]);
-    const nitro = !!(k.ShiftLeft || k.ShiftRight || t.nitro || pad.buttons[1] || pad.buttons[5]);
+    const hand = !!(k.Space || t.hand || pad.buttons[0] || (wheelOn && pad.buttons[5]));
+    const nitro = !!(k.ShiftLeft || k.ShiftRight || t.nitro || pad.buttons[1] || pad.buttons[5] && !wheelOn || (wheelOn && pad.buttons[4]));
     const rewind = !!(k.KeyG || pad.buttons[2]);
-    return { steer: clamp(steer, -1, 1), throttle, brake, hand, nitro, rewind, horn: !!(k.KeyH), back: !!k.KeyV };
+    const useWheel = wheelOn && Math.abs(wheelSteer) > 0.001 || wheelOn && !steer;
+    return { steer: useWheel ? clamp(wheelSteer, -1, 1) : clamp(steer, -1, 1), direct: useWheel, throttle, brake, hand, nitro, rewind, horn: !!(k.KeyH), back: !!k.KeyV };
   }
 
   // ---------- main loop ----------
@@ -464,7 +523,7 @@ class Game {
       // controls
       const lock = this.events.locked;
       const target = lock ? 0 : inp.steer;
-      this.steerIn = damp(this.steerIn, target, Math.abs(target) > Math.abs(this.steerIn) ? 9 : 14, dt);
+      this.steerIn = inp.direct && !lock ? target : damp(this.steerIn, target, Math.abs(target) > Math.abs(this.steerIn) ? 9 : 14, dt);
       const ctl = { throttle: lock ? 0 : inp.throttle, brake: lock ? 0 : inp.brake, steer: this.steerIn, handbrake: lock ? true : inp.hand, nitro: !lock && inp.nitro, abs: set.abs, tcs: set.tcs, stm: set.stm };
       c.throttleIn = ctl.throttle;
       const wasNitro = c.nitroOn, wasGear = c.gear;
@@ -604,13 +663,49 @@ class Game {
   // ---------- visuals ----------
   syncModel(dt) {
     const c = this.car, m = this.model, g = m.group;
-    g.position.set(c.x, c.y, c.z);
-    g.rotation.set(-c.pitch, c.yaw, c.roll);
+    const sus = this.suspension(dt, c, m);
+    g.position.set(c.x, c.y + sus.heave, c.z);
+    g.rotation.set(-c.pitch + sus.pitch, c.yaw, c.roll + sus.roll);
     for (const w of m.wheels) { if (w.front) w.pivot.rotation.y = c.steerAngle; w.spin.rotation.x = c.wheelRot; }
     m.tail.emissiveIntensity = c.brakeOn || c.reverse ? 2.6 : 0.6;
     m.head.emissiveIntensity = 0.9 + this.sky.night * 1.6;
     m.flame.visible = c.nitroOn; if (c.nitroOn) m.flame.scale.set(1 + Math.random() * 0.3, 1 + Math.random() * 0.3, -(1 + Math.random() * 0.5));
     g.visible = this.cam.mode !== 2 || this.mode !== 'play' || this.cam.back;
+  }
+  // Visual suspension: each wheel has its own spring/damper following the ground under it, and the body rides on a
+  // heave spring that reacts to bumps, crests and landings (no brake-dive / squat, as requested).
+  suspension(dt, c, m) {
+    const u = m.group.userData, out = { heave: 0, pitch: 0, roll: 0 };
+    if (!u || !u.wbh || !m.wheels || m.wheels.length < 4) return out;
+    let S = m._sus;
+    if (!S) { S = m._sus = { o: [0, 0, 0, 0], v: [0, 0, 0, 0], base: m.wheels.map((w) => w.pivot.position.y), h: 0, hv: 0, vy: c.vy || 0, ay: 0 }; }
+    dt = Math.min(dt, 0.033);
+    const sy = Math.sin(c.yaw), cy = Math.cos(c.yaw), sr = Math.sin(c.roll), sp = Math.sin(c.pitch);
+    const ms = u.mscale || 1, TRAVEL_UP = 0.13, TRAVEL_DOWN = 0.16;
+    const pos = [[1, 1], [-1, 1], [1, -1], [-1, -1]];
+    let side = [0, 0], fr = [0, 0];
+    for (let i = 0; i < 4; i++) {
+      const lx = pos[i][0] * (u.wx || 0.8), lz = pos[i][1] * u.wbh;
+      const wx = c.x + lx * cy + lz * sy, wz = c.z - lx * sy + lz * cy;
+      const plane = c.y + lx * sr + lz * sp * -1 * -1;
+      let target = c.grounded ? heightAt(wx, wz) - plane : -TRAVEL_DOWN; // airborne: wheels droop
+      target = clamp(target, -TRAVEL_DOWN, TRAVEL_UP);
+      if (this.mode === 'title') target = 0;
+      const k = 520, cd = 38; // spring rate / damping (about 1.1 damping ratio at 500 N/kg)
+      S.v[i] += (k * (target - S.o[i]) - cd * S.v[i]) * dt; S.o[i] += S.v[i] * dt;
+      S.o[i] = clamp(S.o[i], -TRAVEL_DOWN * 1.2, TRAVEL_UP * 1.3);
+      m.wheels[i].pivot.position.y = S.base[i] + S.o[i] / ms;
+      side[pos[i][0] > 0 ? 0 : 1] += S.o[i]; fr[pos[i][1] > 0 ? 0 : 1] += S.o[i];
+    }
+    // body heave: second-order response to the chassis' vertical acceleration (bumps and landings compress the springs)
+    const vy = c.grounded ? (c.vy || 0) : (c.vy || 0);
+    let ay = (vy - S.vy) / Math.max(dt, 1e-3); S.vy = vy; ay = clamp(ay, -70, 70); S.ay += (ay - S.ay) * Math.min(1, dt * 18);
+    S.hv += (-62 * S.h - 9.5 * S.hv - S.ay * 0.55) * dt; S.h += S.hv * dt; S.h = clamp(S.h, -0.14, 0.09);
+    out.heave = S.h;
+    // slight roll / pitch from uneven wheel travel (one wheel over a kerb lifts that corner of the body a little)
+    out.roll = clamp((side[1] - side[0]) / ((u.wx || 0.8) * 4) * 0.55, -0.05, 0.05);
+    out.pitch = clamp((fr[1] - fr[0]) / (u.wbh * 4) * 0.5, -0.04, 0.04) * -1;
+    return out;
   }
   updateCamera(dt) {
     const cam = this.camera, C = this.cam, c = this.car, set = this.state.settings;

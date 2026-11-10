@@ -4,6 +4,7 @@ const KEY = 'horizonPages.save.v1';
 export const SETTINGS_DEFAULT = {
   quality: 'medium', units: 'kmh', traffic: 2, master: 0.7, music: 0.5, sfx: 0.8, fov: 68, cam: 0,
   tod: '11', todSpeed: 1, weather: 'auto', season: 'auto', difficulty: 1, drive: 'left', seed: 1337,
+  wheelOn: true, wheelRange: 540, wheelCurve: 1, wheelDead: 0.02, wheelMap: null,
   github: '', name: 'Racer', radio: 0, abs: true, tcs: true, stm: true, line: true, auto: true, shake: true, hints: true,
 };
 export function defaults() {

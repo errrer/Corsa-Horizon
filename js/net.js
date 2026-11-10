@@ -24,7 +24,13 @@ export class Net {
   get online() { return this.role !== 'off'; }
   get count() { return this.remotes.size + 1; }
   name() { return ((this.g.state.settings.name || 'Racer') + '').replace(/[<>]/g, '').slice(0, 16) || 'Racer'; }
-  setStatus(s) { this.status = s; this.g.ui.refreshOnline && this.g.ui.refreshOnline(); }
+  setStatus(s, kind) {
+    this.status = s; this.g.ui.refreshOnline && this.g.ui.refreshOnline();
+    let b = document.getElementById('netBadge');
+    if (!b) { b = document.createElement('div'); b.id = 'netBadge'; b.style.cssText = 'position:fixed;left:50%;top:6px;transform:translateX(-50%);z-index:30;padding:3px 12px;border-radius:999px;background:rgba(13,17,23,.72);color:#e6edf3;font:600 12px system-ui;pointer-events:none;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis'; document.body.appendChild(b); }
+    const col = this.online ? '#3fb950' : /rror|annot|block|retry/i.test(s) ? '#f85149' : '#d29922';
+    b.innerHTML = `<span style="color:${col}">&#9679;</span> ${s.replace(/</g, '&lt;')}`;
+  }
   async load() {
     if (window.Peer) return;
     await new Promise((res, rej) => { const s = document.createElement('script'); s.src = PEER_SRC; s.onload = res; s.onerror = () => rej(new Error('Could not reach the multiplayer library. Online play needs a normal website (e.g. GitHub Pages) with internet access.')); document.head.appendChild(s); });
@@ -32,16 +38,17 @@ export class Net {
   // Connect to the world: join the first server that has room, or start the first one that nobody is hosting.
   async autoJoin() {
     if (this.busy || this.online) return;
-    this.busy = true; this.auto = true;
+    this.busy = true; this.auto = true; this.lastErr = '';
+    if (!window.RTCPeerConnection) { this.busy = false; return this.setStatus('Online play is blocked here (no WebRTC). Open the game on its real website.'); }
     try { await this.load(); } catch (e) { this.busy = false; return this.setStatus(e.message); }
     for (let n = 1; n <= SERVERS && this.auto; n++) {
       this.setStatus(`Looking for server ${n}...`);
       let r = await this.tryServer(n);
-      if (r === 'retry') r = await this.tryServer(n);
+      for (let k = 0; k < 4 && r === 'retry'; k++) { await new Promise((ok) => setTimeout(ok, 1200)); r = await this.tryServer(n); }
       if (r === 'ok') { this.busy = false; return; }
     }
     this.busy = false;
-    if (this.auto) { this.setStatus('Could not connect - retrying shortly'); setTimeout(() => { if (this.auto && !this.online) this.autoJoin(); }, 8000); }
+    if (this.auto) { this.setStatus(this.lastErr ? 'Cannot reach multiplayer (' + this.lastErr + ') - retrying' : 'Could not connect - retrying'); setTimeout(() => { if (this.auto && !this.online) this.autoJoin(); }, 8000); }
   }
   tryServer(n) {
     return new Promise((resolve) => {
@@ -54,11 +61,11 @@ export class Net {
         const hp = new window.Peer(serverId(n), PEER_OPTS);
         hp.on('open', () => { if (done) return; this.peer = hp; this.role = 'host'; this.server = n; this.conns.clear(); this.setStatus(`Server ${n}: you are hosting (1/${MAX_PLAYERS})`); finish('ok', hp); });
         hp.on('connection', (c) => this.accept(c));
-        hp.on('error', (e) => { if (e.type === 'unavailable-id') finish('retry', hp); else if (!done) finish('fail', hp); else this.setStatus('Error: ' + (e.type || e.message)); });
+        hp.on('error', (e) => { if (e.type === 'unavailable-id') finish('retry', hp); else if (!done) { this.lastErr = e.type || 'network'; finish('fail', hp); } else this.setStatus('Error: ' + (e.type || e.message)); });
         hp.on('disconnected', () => { try { hp.reconnect(); } catch (e) { /* ignore */ } });
       };
       const gp = new window.Peer(undefined, PEER_OPTS);
-      gp.on('error', (e) => { if (e.type === 'peer-unavailable') becomeHost(); else if (!hostTried) finish('fail', gp); });
+      gp.on('error', (e) => { if (e.type === 'peer-unavailable') becomeHost(); else if (!hostTried) { this.lastErr = e.type || 'network'; finish('fail', gp); } });
       gp.on('open', () => {
         const c = gp.connect(serverId(n), { metadata: { name: this.name() }, reliable: false });
         c.on('open', () => {

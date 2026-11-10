@@ -19,6 +19,32 @@ const STYLES = {
 STYLES.gt3 = { ...STYLES.super, L: 4.57, W: 1.85, H: 1.28, wr: 0.35 };
 STYLES.huracan = { ...STYLES.super, L: 4.52, W: 1.93, H: 1.17, wr: 0.35 };
 STYLES.m5 = { ...STYLES.gt, L: 4.97, W: 1.9, H: 1.47, wr: 0.352 };
+// Per-car look overrides: proportions plus extra bodywork, so no two roster cars share a silhouette.
+const LOOKS = {
+  commit: { L: 3.7, H: 1.52, belt: 0.95, wr: 0.30, round: 1, cab: [0.15, 0.0, -0.40, -0.5] },
+  patch: { L: 3.88, W: 1.8, H: 1.42, wr: 0.32, flares: 1, stripe: 0xffffff, ducktail: 1, tail: 0.07, slim: 1 },
+  branch: { L: 4.15, W: 1.84, H: 1.5, clear: 0.26, wr: 0.36, lightbar: 1, hoodvent: 1, flares: 1, stripe: 0xf0f6fc },
+  bisect: { L: 4.22, W: 1.86, H: 1.46, clear: 0.25, wr: 0.36, hoodvent: 1, flares: 1, wing: 1, stripe: 0xffd33d, slim: 1, snorkel: 1 },
+  hotfix: { L: 4.4, W: 1.84, H: 1.26, clear: 0.12, flares: 1, ducktail: 1, hoodvent: 1, roofDark: 1, spoiler: 0, cab: [0.1, -0.06, -0.28, -0.38] },
+  diff: { L: 4.5, W: 1.87, H: 1.28, clear: 0.11, flares: 1, wing: 1, spoiler: 0, hoodvent: 1, stripe: 0x15181c, quad: 1, diffuser: 1, roofDark: 1 },
+  cache: { L: 4.3, W: 1.8, H: 1.34, scoop: 1, hoodvent: 1, stripe: 0xffffff, tailBar: 1, slim: 1, spoiler: 0 },
+  merge: { L: 4.9, W: 1.96, H: 1.34, round: 1, stripe: 0xf0f6fc, scoop: 1, quad: 1, hood: 0.1, tail: 0.04 },
+  yank: { L: 4.85, W: 1.98, H: 1.32, slim: 1, stripe: 0x15181c, scoop: 1, hoodvent: 1, ducktail: 1, tailBar: 1, flares: 1, wr: 0.36 },
+  fork: { L: 4.5, W: 1.93, H: 1.9, clear: 0.34, wr: 0.42, bull: 1, snorkel: 1, spare: 1, roofbasket: 1, round: 1, flares: 1 },
+  lint: { L: 5.0, W: 1.98, H: 1.8, clear: 0.34, wr: 0.42, cab: [0.18, 0.1, -0.3, -0.4], bull: 1, lightbar: 1, roofbasket: 1, flares: 1, spare: 1 },
+  stack: { L: 4.8, W: 1.9, H: 1.78, wr: 0.38, cargo: 1, slim: 1, tailBar: 1, roofrack: 0 },
+  stash: { L: 4.7, W: 1.92, H: 1.28, hood: 0.2, slim: 1, quad: 1, tailBar: 1, roofDark: 1, spoiler: 0, cab: [0.0, -0.14, -0.3, -0.38] },
+  rebase: { L: 4.0, W: 1.82, H: 1.2, rollbar: 1, round: 1, stripe: 0xffffff },
+  tag: { L: 3.8, W: 1.75, H: 1.18, wr: 0.3, rollbar: 1, round: 1 },
+  cherry: { L: 4.15, W: 1.86, H: 1.18, wr: 0.33, rollbar: 1, slim: 1, fins: 1, tailBar: 1, stripe: 0x15181c },
+  buggy: { flares: 2, lightbar: 1, spare: 1 },
+  blame: { L: 3.7, W: 2.0, wr: 0.44, clear: 0.38, flares: 2, lightbar: 1, bull: 1 },
+  release: { L: 4.55, W: 2.0, H: 1.12, slim: 1, tailBar: 1, diffuser: 1, fins: 1, spoiler: 0, wing: 1, stripe: 0xffffff },
+  mainst: { L: 4.6, W: 2.02, H: 1.1, slim: 1, tailBar: 1, diffuser: 1, quad: 1, spoiler: 1, hoodvent: 1, roofDark: 1 },
+  hash: { L: 4.75, W: 2.08, H: 1.08, slim: 1, tailBar: 1, diffuser: 1, fins: 1, wing: 1, hoodvent: 1, stripe: 0x15181c },
+  deploy: { L: 4.85, W: 2.1, H: 1.06, hood: 0.24, tail: 0.16, slim: 1, tailBar: 1, diffuser: 1, fins: 1, wing: 1, stripe: 0xffffff },
+};
+const styleOf = (c) => ({ ...(STYLES[c.style] || STYLES.hatch), ...(LOOKS[c.id] || {}) });
 const B = (o) => ({ cgH: 0.5, brake: 1.15, stiff: 9.5, offroad: 0.1, steer: 0.55, roll: 1, cyl: 4, nitroBase: 1, ...o });
 const RAW = [
   B({ id: 'commit', name: 'Commit Compact', style: 'hatch', price: 0, mass: 1150, kw: 95, top: 185, drive: 'FWD', mu: 1.12, wf: 0.6, color: 0x2ea043, cyl: 4, desc: 'Small, honest and free. Every repo starts here.' }),
@@ -48,7 +74,7 @@ const RAW = [
   B({ id: 'deploy', name: 'Deploy Hypercar', style: 'hyper', price: 650000, mass: 1350, kw: 900, top: 400, drive: 'AWD', mu: 1.5, wf: 0.44, downforce: 1.6, steer: 0.5, color: 0xe6edf3, cyl: 12, desc: 'Straight to production. No rollback.' }),
 ];
 export const CARS = RAW.map((c) => {
-  const st = STYLES[c.style];
+  const st = styleOf(c);
   const spec = { ...c, L: st.L, W: st.W, H: st.H, wb: st.L * 0.63, track: st.W - 0.3, wheelR: st.wr, redline: 6800 + c.cyl * 120 };
   spec.pi = computePI(spec); spec.cls = classOf(spec.pi);
   return spec;
@@ -108,7 +134,7 @@ function sharedMats() {
 
 // Builds a drivable car model. Returns { group, body, wheels, tail, head, flame }
 export function buildCar(spec, colorHex) {
-  const st = STYLES[spec.style] || STYLES.hatch, M = sharedMats();
+  const st = styleOf(spec), M = sharedMats();
   const { L, W, H, clear, belt } = st;
   const group = new THREE.Group();
   const body = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3, metalness: 0.35, side: THREE.DoubleSide });
@@ -138,7 +164,7 @@ export function buildCar(spec, colorHex) {
       { z: cfb * L, pts: [[-cw, yt - 0.02], [cw, yt - 0.02], [tw, yt + 0.05], [-tw, yt + 0.05]] },
     ]);
     const cabM = new THREE.Mesh(cab, M.glass); cabM.castShadow = true; group.add(cabM);
-    boxM(body, tw * 2 + 0.02, 0.07, (cft - crt) * L + 0.1, 0, top - 0.02, ((cft + crt) / 2) * L, group);
+    boxM(st.roofDark ? M.dark : body, tw * 2 + 0.02, 0.07, (cft - crt) * L + 0.1, 0, top - 0.02, ((cft + crt) / 2) * L, group);
     if (st.roofrack) { boxM(M.dark, tw * 1.6, 0.06, (cft - crt) * L * 0.8, 0, top + 0.06, ((cft + crt) / 2) * L, group); }
   } else {
     // windscreen + seats
@@ -156,10 +182,14 @@ export function buildCar(spec, colorHex) {
   }
   // details
   boxM(M.dark, W * 0.5, 0.2, 0.06, 0, y0 + 0.28, zf - 0.04, group, false); // grille
-  boxM(head, 0.38, 0.14, 0.08, w2 * 0.66, yt - st.hood - 0.04, zf - 0.07, group, false);
-  boxM(head, 0.38, 0.14, 0.08, -w2 * 0.66, yt - st.hood - 0.04, zf - 0.07, group, false);
-  boxM(tail, 0.44, 0.13, 0.06, w2 * 0.66, yt - st.tail - 0.08, -zf + 0.02, group, false);
-  boxM(tail, 0.44, 0.13, 0.06, -w2 * 0.66, yt - st.tail - 0.08, -zf + 0.02, group, false);
+  const hy = yt - st.hood - 0.04;
+  for (const sx of [-1, 1]) {
+    if (st.round) { const hl = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.08, 14).rotateX(Math.PI / 2), head); hl.position.set(sx * w2 * 0.66, hy, zf - 0.05); group.add(hl); }
+    else if (st.slim) boxM(head, 0.5, 0.07, 0.08, sx * w2 * 0.62, hy + 0.02, zf - 0.07, group, false);
+    else boxM(head, 0.38, 0.14, 0.08, sx * w2 * 0.66, hy, zf - 0.07, group, false);
+    if (!st.tailBar) boxM(tail, st.round ? 0.3 : 0.44, st.round ? 0.2 : 0.13, 0.06, sx * w2 * 0.66, yt - st.tail - 0.08, -zf + 0.02, group, false);
+  }
+  if (st.tailBar) boxM(tail, W * 0.86, 0.07, 0.05, 0, yt - st.tail - 0.06, -zf + 0.02, group, false);
   boxM(M.dark, W * 0.96, 0.12, 0.1, 0, y0 + 0.08, zf - 0.08, group, false); // front splitter / bumper
   boxM(M.dark, W * 0.96, 0.12, 0.1, 0, y0 + 0.08, -zf + 0.08, group, false);
   for (const sx of [-1, 1]) {
@@ -174,6 +204,31 @@ export function buildCar(spec, colorHex) {
   }
   if (st.stripes) { boxM(M.chrome, 0.28, 0.01, L * 0.62, 0.22, yt - st.hood * 0.4 + 0.012, zf * 0.15, group, false); boxM(M.chrome, 0.28, 0.01, L * 0.62, -0.22, yt - st.hood * 0.4 + 0.012, zf * 0.15, group, false); }
   for (const sx of [-1, 1]) boxM(M.chrome, 0.1, 0.1, 0.22, sx * w2 * 0.45, y0 + 0.12, -zf + 0.02, group, false); // exhausts
+
+  // per-car extras
+  const wb2 = spec.wb / 2, wr0 = st.wr;
+  const tilt = Math.atan2(st.hood, zf * 0.45), hoodY = yt - st.hood * 0.5, hoodZ = zf * 0.575;
+  if (st.stripe != null) {
+    const sm = new THREE.MeshStandardMaterial({ color: st.stripe, roughness: 0.4 });
+    for (const sx of [-0.15, 0.15]) {
+      const h1 = boxM(sm, 0.2, 0.012, Math.hypot(zf * 0.45, st.hood), sx, hoodY + 0.016, hoodZ, group, false); h1.rotation.x = tilt;
+      const dz = Math.atan2(st.tail * 0.3, zf * 0.38), h2 = boxM(sm, 0.2, 0.012, Math.hypot(zf * 0.38, st.tail * 0.3), sx, yt - st.tail * 0.15 + 0.016, -zf * 0.69, group, false); h2.rotation.x = -dz;
+      if (!st.open) boxM(sm, 0.2, 0.012, (cft - crt) * L + 0.12, sx, H + 0.026, ((cft + crt) / 2) * L, group, false);
+    }
+  }
+  if (st.flares) for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) boxM(body, 0.14 * st.flares, 0.3 * (st.flares > 1 ? 1.2 : 1), wr0 * 2.3, sx * (w2 + 0.03), wr0 + 0.02, sz * wb2, group);
+  if (st.hoodvent) for (const sx of [-0.32, 0.32]) { const v = boxM(M.dark, 0.3, 0.014, 0.45, sx, hoodY + 0.02, hoodZ + 0.1, group, false); v.rotation.x = tilt; }
+  if (st.ducktail) boxM(body, W * 0.8, 0.06, 0.28, 0, yt - st.tail + 0.07, -zf + 0.1, group);
+  if (st.fins) for (const sx of [-1, 1]) boxM(body, 0.05, 0.4, 0.9, sx * w2 * 0.75, yt + 0.1, -zf + 0.7, group);
+  if (st.diffuser) { boxM(M.dark, W * 0.7, 0.18, 0.4, 0, y0 + 0.1, -zf + 0.15, group, false); for (const sx of [-0.3, 0, 0.3]) boxM(M.dark, 0.04, 0.2, 0.42, sx, y0 + 0.1, -zf + 0.12, group, false); }
+  if (st.quad) for (const sx of [-1, 1]) boxM(M.chrome, 0.1, 0.1, 0.22, sx * w2 * 0.3, y0 + 0.12, -zf + 0.02, group, false);
+  if (st.bull) { boxM(M.dark, W * 0.7, 0.12, 0.12, 0, y0 + 0.3, zf + 0.06, group); for (const sx of [-0.3, 0.3]) boxM(M.chrome, 0.06, 0.5, 0.06, sx, y0 + 0.5, zf + 0.06, group, false); }
+  if (st.lightbar) { const lz = cft * L + 0.05; boxM(M.dark, W * 0.55, 0.08, 0.12, 0, H + 0.08, lz, group, false); for (let i = -2; i <= 2; i++) boxM(head, 0.17, 0.07, 0.04, i * 0.19, H + 0.08, lz + 0.07, group, false); }
+  if (st.snorkel) boxM(M.dark, 0.08, 0.9, 0.08, w2 * 0.96, H * 0.72, cfb * L + 0.05, group, false);
+  if (st.spare) { const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.33, 0.2, 14).rotateX(Math.PI / 2), M.tire); sp.position.set(0, yt + 0.2, -zf - 0.12); sp.castShadow = true; group.add(sp); }
+  if (st.roofbasket) { const rz = ((cft + crt) / 2) * L; boxM(M.dark, W * 0.72, 0.14, (cft - crt) * L * 0.9, 0, H + 0.1, rz, group); boxM(M.chrome, W * 0.7, 0.04, 0.05, 0, H + 0.2, rz + (cft - crt) * L * 0.42, group, false); }
+  if (st.cargo) boxM(M.dark, W * 0.55, 0.28, 1.6, 0, H + 0.2, ((cft + crt) / 2) * L, group);
+  if (st.rollbar) { const wz = cfb * L; for (const sx of [-1, 1]) boxM(body, 0.34, 0.2, 0.5, sx * w2 * 0.38, yt + 0.28, wz - 1.45, group); }
 
   // nitro flames
   const flame = new THREE.Mesh(new THREE.ConeGeometry(0.16, 1.6, 8).rotateX(-Math.PI / 2),

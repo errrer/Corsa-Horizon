@@ -144,7 +144,7 @@ function buildInstance(spec, colorHex, T) {
   const flame = new THREE.Mesh(new THREE.ConeGeometry(0.16, 1.6, 8).rotateX(-Math.PI / 2),
     new THREE.MeshBasicMaterial({ color: 0x66b3ff, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
   flame.position.set(0, 0.42, -spec.L / 2 - 0.65); flame.visible = false; flame.scale.z = -1; group.add(flame);
-  group.userData = { L: spec.L, W: spec.W, wr: cfg.wr, wbh: cfg.wbh, wx: cfg.wx };
+  group.userData = { L: spec.L, W: spec.W, wr: cfg.wr, wbh: cfg.wbh, wx: cfg.wx, mscale: cfg.scale };
   const mats = Object.values(M).map((m) => own[m.name] || m);
   return { group, body: paint, wheels: pivots, tail, head, flame, bodyMat: paint, mats };
 }
