@@ -403,7 +403,22 @@ class Game {
     if (this.cal && this.cal.active) { this.calibrate(pads); return; }
     if (wheel) {
       const m = this.wheelMap(), ax = wheel.axes;
-      const pedal = (d) => { if (!d || ax[d.i] === undefined) return 0; const v = (ax[d.i] - d.rest) / ((d.full - d.rest) || -2); return clamp(v < 0.03 ? 0 : v, 0, 1); };
+      // Pedals are ignored until the axis has actually moved: many wheels report 0 on idle pedals until first touched,
+      // which used to read as a half-pressed brake (= reverse). The idle value is learned from the wheel itself.
+      const pk = wheel.id + JSON.stringify(set.wheelMap || 0);
+      if (this.pedId !== pk) { this.pedId = pk; this.pedSt = {}; }
+      const saved = !!set.wheelMap;
+      const pedal = (d) => {
+        if (!d || ax[d.i] === undefined) return 0;
+        const a = ax[d.i]; let s = this.pedSt[d.i];
+        if (!s) s = this.pedSt[d.i] = { init: a, armed: false, rest: d.rest, full: d.full };
+        if (!s.armed) {
+          if (Math.abs(a - s.init) < 0.02) return 0;
+          s.armed = true;
+          if (!saved) { s.rest = Math.abs(s.init) > 0.9 ? Math.sign(s.init) : (Math.abs(a) > 0.9 ? Math.sign(a) : 1); s.full = -s.rest; }
+        }
+        const v = (a - s.rest) / ((s.full - s.rest) || -2); return clamp(v < 0.04 ? 0 : v, 0, 1);
+      };
       let raw = ax[m.steer] || 0; const dz = set.wheelDead || 0.02; raw = Math.abs(raw) < dz ? 0 : raw;
       const range = set.wheelRange || 540, k = 900 / range; // wheel range 900 deg => 1:1; 540 deg lock-to-lock => 1.67x
       let st = clamp(raw * k, -1, 1); st = Math.sign(st) * Math.pow(Math.abs(st), set.wheelCurve || 1);
